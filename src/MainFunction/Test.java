@@ -1,16 +1,9 @@
 package MainFunction;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 
-import graphalgorithms.RouteSearching;
-import network.Layer;
 import network.Link;
-import network.Network;
 import network.Node;
-import network.NodePair;
-import network.VirtualLink;
 import subgraph.LinearRoute;
 
 public class Test {

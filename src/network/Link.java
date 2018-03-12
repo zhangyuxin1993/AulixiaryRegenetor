@@ -27,7 +27,6 @@ public class Link extends CommonObject{
 	private double restcapacity = 0;
 	private double UsedCapacity = 0;
 	private int maxslot;//最大使用slot
-	private ArrayList<VirtualLink> virtuallinklist = null;
 	
 	
 	public double getUsedCapacity() {
@@ -54,13 +53,7 @@ public class Link extends CommonObject{
 		this.restcapacity = restcapacity;
 	}
 	
-	public ArrayList<VirtualLink> getVirtualLinkList() {
-		return virtuallinklist;	
-	}
-	
-	public void setVirtualLinkList(ArrayList<VirtualLink> virtuallinklist){
-		this.virtuallinklist.addAll(virtuallinklist);
-	}
+ 
 	public int getMaxslot() {
 		return maxslot;
 	}
@@ -196,10 +189,6 @@ public class Link extends CommonObject{
 		}
 		for(int k=0;k<Constant.WAVE_PRE_FIBER;k++)
 			this.wavestatus[k]= Constant.FREE;
-		
-		this.virtuallinklist = new ArrayList<VirtualLink>();
 	}
-  
-	
 }
 

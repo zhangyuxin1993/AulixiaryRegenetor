@@ -163,22 +163,20 @@ public class Layer extends CommonObject{
 	}
 
 	public void removeLink(Link link){
+		Link delLink=new Link(null, 0, null, this, null, null, 0, 0);
 		Iterator<String> linkitor = this.linklist.keySet().iterator();
 		while (linkitor.hasNext()) {
 			Link remlink = (Link) (this.linklist.get(linkitor.next()));
 			if(link.equals(remlink)){//取出需要删除的链路
-				Node nodeA=remlink.getNodeA();
-				Node nodeB=remlink.getNodeB();
-				nodeA.removeNeiNode(nodeB);
-				nodeB.removeNeiNode(nodeA);
-				remlink.setAssociatedLayer(null);
-				this.linklist.remove(remlink.getName());	
+				delLink=remlink;
 			}
 		}
-		
-	 
-		
-		
+		Node nodeA=delLink.getNodeA();
+		Node nodeB=delLink.getNodeB();
+		nodeA.removeNeiNode(nodeB);
+		nodeB.removeNeiNode(nodeA);
+		delLink.setAssociatedLayer(null);
+		this.linklist.remove(delLink.getName());	
 	}
 	
 	/**
@@ -271,7 +269,7 @@ public class Layer extends CommonObject{
 					if(!(name.equals("Link"))){
 						Node nodeA = this.getNodelist().get(data[1]);						
 						Node nodeB = this.getNodelist().get(data[2]);
-						double length = Double.parseDouble(data[3]);
+						int length = (int) Double.parseDouble(data[3]);
 						double cost = Double.parseDouble(data[4]);
 						int index = this.getLinklist().size();
 						if(nodeA.getIndex()<nodeB.getIndex()){
@@ -412,6 +410,3 @@ public class Layer extends CommonObject{
 
 
 }
-
-
-

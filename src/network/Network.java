@@ -114,7 +114,7 @@ public class Network extends CommonObject{
 					if(!(name.equals("Link"))){
 						Node nodeA = layer.getNodelist().get(data[1]);						
 						Node nodeB = layer.getNodelist().get(data[2]);
-						double length = Double.parseDouble(data[3]);
+						int length = (int) Double.parseDouble(data[3]);
 						double cost = Double.parseDouble(data[4]);
 						int index = layer.getLinklist().size();
 						Link newlink = new Link(name,index,"",layer,nodeA,nodeB,length,cost);

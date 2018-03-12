@@ -2,6 +2,7 @@ package network;
 
 import java.util.ArrayList;
 
+import MainFunction.RouteAndRegPlace;
 import subgraph.LinearRoute;
 import general.CommonObject;
 import general.Constant;
@@ -16,15 +17,15 @@ public class NodePair extends CommonObject{
 	private int trafficdemand=0; //traffic demand between node pair
 	private int Arrange_status=Constant.UNORDER; //节点对还未按流量大小顺序排列
 	private int slotsnum;
-//	private RouteAndRegPlace FinalRoute=null;
+	private RouteAndRegPlace FinalRoute=null;
 	
 	
-//	public RouteAndRegPlace getFinalRoute() {
-//		return FinalRoute;
-//	}
-//	public void setFinalRoute(RouteAndRegPlace FinalRoute) {
-//		this.FinalRoute = FinalRoute;
-//	}
+	public RouteAndRegPlace getFinalRoute() {
+		return FinalRoute;
+	}
+	public void setFinalRoute(RouteAndRegPlace FinalRoute) {
+		this.FinalRoute = FinalRoute;
+	}
 	
 	public Layer getAssociateLayer() {
 		return associateLayer;
@@ -125,6 +126,7 @@ public class NodePair extends CommonObject{
 			}
 		}
 	}
+ 
 	
 
 

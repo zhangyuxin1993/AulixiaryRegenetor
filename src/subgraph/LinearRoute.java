@@ -11,9 +11,7 @@ import network.Node;
 
 public class LinearRoute extends Subgraph {
 	private int slotsnum;
-	  private ArrayList<Link>linklist=null;
-	  
-	public LinearRoute(String name, int index, String comments) {
+	  public LinearRoute(String name, int index, String comments) {
 		super(name, index, comments);
 		// TODO Auto-generated constructor stub
 	       
@@ -37,7 +35,6 @@ public class LinearRoute extends Subgraph {
 	public void OutputRoute_node(LinearRoute newroute,String write_name) throws IOException{//输出节点
 		file_out_put file=new file_out_put();
 		if(newroute.getNodelist().size()==0){
-//			System.out.println("no path to the desnode");
 			file.filewrite(write_name,"no path to the desnode");
 		}
 		else{ 
@@ -46,7 +43,6 @@ public class LinearRoute extends Subgraph {
 			           file.filewrite(write_name,node.getName()+"   ");			          			           
 		      }		     
 		}		
-		 
 	}
 	
 	public void OutputRoute_node(LinearRoute newroute){//输出路径的节点信息
@@ -62,9 +58,7 @@ public class LinearRoute extends Subgraph {
 		     	      
 		}
 	}
-	//public ArrayList<Link> getRoute_linklist() {可删，返回linklist
-	//	return linklist;
-	//}
+	
 	public void setSlotsnum(int slotsnum) {
 	
 		this.slotsnum = slotsnum;

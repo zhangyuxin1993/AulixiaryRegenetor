@@ -1,7 +1,6 @@
 package resource;
-import network.Link;
-import network.VirtualLink;
 import demand.Request;
+import network.Link;
 
 public class ResourceOnLink {
 	private Request request;
@@ -17,13 +16,7 @@ public class ResourceOnLink {
 		this.setSlots(slots);
 		this.resouceocuppied(request, link, startindex, slots);
 	}
-	public ResourceOnLink(Request request, VirtualLink Vlink, int startindex, int slots) {
-		this.setRequest(request);
-		this.setLink(link);
-		this.setStartindex(startindex);
-		this.setSlots(slots);
-		this.resouceocuppied(request, link, startindex, slots);
-	}
+ 
 	
 	//分配资源时按离开时间进行排序;
 	public void resouceocuppied(Request request, Link link, int startindex, int slots){

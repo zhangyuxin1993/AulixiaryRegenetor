@@ -2,6 +2,7 @@ package MainFunction;
 
 import java.util.ArrayList;
 
+import network.Link;
 import subgraph.LinearRoute;
 
 public class RouteAndRegPlace {//Ò»ÌõÒµÎñµÄÂ·ÓÉ ÒÔ¼°Â·ÓÉÉÏreg¸öÊı ĞÂÊ¹ÓÃµÄFSÊı ÔÙÉúÆ÷µÄÎ»ÖÃ ÒÔ¼°¹¤×÷»¹ÊÇ±£»¤
@@ -10,11 +11,31 @@ public class RouteAndRegPlace {//Ò»ÌõÒµÎñµÄÂ·ÓÉ ÒÔ¼°Â·ÓÉÉÏreg¸öÊı ĞÂÊ¹ÓÃµÄFSÊı Ô
 	private int newFSnum=0;
 	private ArrayList<Integer> regnode=new ArrayList<Integer>();
 	private int nature=0;  //ÊôĞÔ¹¤×÷ÊÇ0±£»¤ÊÇ1
+	private int constant=0;  //ÊôĞÔ¹¤×÷ÊÇ0±£»¤ÊÇ1
 	private ArrayList<Integer> IPRegnode=new ArrayList<Integer>();
 	private float NumRemainFlow=0;
 	private ArrayList<Regenerator> UsedShareReg=new ArrayList<Regenerator>();
 	private ArrayList<Integer> NewRegList=new ArrayList<Integer>();
+	private ArrayList<Link> LinklistOnRoute=new ArrayList<Link>();
 	
+	public RouteAndRegPlace(LinearRoute route, int nature) {
+		super();
+		this.route = route;
+		this.nature = nature;
+	}
+
+	public RouteAndRegPlace(ArrayList<Link> LinklistOnRoute, int nature,int constant) {
+		super();
+		this.LinklistOnRoute = LinklistOnRoute;
+		this.nature = nature;
+		this.constant=constant;
+	}
+	public void setLinklistOnRoute(ArrayList<Link> LinklistOnRoute) {
+		this.LinklistOnRoute.addAll(LinklistOnRoute);
+	}
+	public ArrayList<Link> getLinklistOnRoute() {
+		return LinklistOnRoute;
+	}
 	
 	public void setNewRegList(ArrayList<Integer> NewRegList) {
 		this.NewRegList.addAll(NewRegList);
@@ -46,11 +67,7 @@ public class RouteAndRegPlace {//Ò»ÌõÒµÎñµÄÂ·ÓÉ ÒÔ¼°Â·ÓÉÉÏreg¸öÊı ĞÂÊ¹ÓÃµÄFSÊı Ô
 	}
 	
 	
-	public RouteAndRegPlace(LinearRoute route, int nature) {
-		super();
-		this.route = route;
-		this.nature = nature;
-	}
+
 	public LinearRoute getRoute(){
 		return route;
 	}

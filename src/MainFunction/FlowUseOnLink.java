@@ -4,28 +4,27 @@ import network.Link;
 
 public class FlowUseOnLink {
 	private Link link;
-	private double flowuseonlink=0;
+	private double FlowUseOnLink=0;
  
-	public FlowUseOnLink(Link link, double flowuseonlink) {
+	public FlowUseOnLink(Link link, double flowUseOnLink) {
 		super();
 		this.link = link;
-		this.flowuseonlink = flowuseonlink;
+		FlowUseOnLink = flowUseOnLink;
 	}
 	
-	public void setlink(Link link) {
+	public void setvlink(Link link) {
 		this.link=link;
 	}
-	public Link getLink() {
+	public Link getVlink() {
 		return link;
 	}
 	
 	public void setFlowUseOnLink(double FlowUseOnLink) {
-		this.flowuseonlink=FlowUseOnLink;
+		this.FlowUseOnLink=FlowUseOnLink;
 	}
 	public double getFlowUseOnLink() {
-		return flowuseonlink;
+		return FlowUseOnLink;
 	}
 	
 
 }
-

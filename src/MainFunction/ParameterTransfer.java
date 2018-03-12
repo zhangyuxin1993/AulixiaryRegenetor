@@ -18,14 +18,14 @@ public class ParameterTransfer {
 	ArrayList<Double> ResFlowOnlinks= new ArrayList<>();
 	int numOfTransponder=0;
 	double cost_of_tranp=0;
-	int NumOfVirtLink=0;
+	int NumOfLink=0;
 	ArrayList<Link> IPlinkStaInWork=new ArrayList<>();
 	
-	public int getNumOfVirtLink() {
-		return NumOfVirtLink;
+	public int getNumOfLink() {
+		return NumOfLink;
 	}
-	public void setNumOfVirtLink(int  NumOfVirtLink) {
-		 this.NumOfVirtLink=NumOfVirtLink;
+	public void setNumOfLink(int  NumOfLink) {
+		 this.NumOfLink=NumOfLink;
 	}
 	public double getcost_of_tranp() {
 		return cost_of_tranp;

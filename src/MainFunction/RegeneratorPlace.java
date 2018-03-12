@@ -11,7 +11,6 @@ import network.Layer;
 import network.Link;
 import network.Node;
 import network.NodePair;
-import network.VirtualLink;
 import resource.ResourceOnLink;
 import subgraph.LinearRoute;
 
@@ -20,11 +19,10 @@ public class RegeneratorPlace {
 	static int totalregNum = 0;
 	String OutFileName = MainOfAulixiaryRegenetor.OutFileName;
 
-	public boolean regeneratorplace(int IPflow, double routelength, Boolean LinkOrRoute,LinearRoute newRoute, ArrayList<Link> linklistOfRoute,Layer MixLayer,
-			ArrayList<WorkandProtectRoute> wprlist, NodePair nodepair,ArrayList<Double> RegLengthList,ArrayList<SlotUseOnWorkPhyLink> rowList,float threshold,
-			ParameterTransfer ptOftransp) { // 注意最少再生器个数的计算
-	 
+	public boolean regeneratorplace(double IPflow, double routelength, Boolean LinkOrRoute,LinearRoute newRoute, ArrayList<Link> linklistOfRoute,Layer MixLayer,
+			ArrayList<WorkandProtectRoute> wprlist, NodePair nodepair,ArrayList<Double> RegLengthList,float threshold,ParameterTransfer ptOftransp) { 
 		// 第二种方法先判断一条路径最少使用的再生器的个数 然后穷尽所有的情况来选择再生器 放置的位置
+	
 		file_out_put file_io = new file_out_put();
 		int minRegNum = (int) Math.floor(routelength / 4000);// 最少的再生器的个数
 		int internode=0;
@@ -37,7 +35,7 @@ public class RegeneratorPlace {
 		ArrayList<Link> linklist = new ArrayList<>();
 		boolean partworkflag = false, RSAflag = false, regflag = false, success = false;
 		ArrayList<RouteAndRegPlace> regplaceoption = new ArrayList<>();
-		RouteAndRegPlace finalRoute = new RouteAndRegPlace(null, 0);
+		RouteAndRegPlace finalRoute = null ;
 		
 		// 找到所有可以成功路由的路径 part1
 		for (int s = minRegNum; s <= internode; s++) {
@@ -104,27 +102,44 @@ public class RegeneratorPlace {
 					// 如果路由成功则保存该路由对于再生器的放置
 				}
 				if (partworkflag) {// 在一个特定的set下进行路由结束
-					RouteAndRegPlace rarp = new RouteAndRegPlace(newRoute, 0);
-					rarp.setnewFSnum(FStotal);
-					ArrayList<Integer> setarray = new ArrayList<>();
-					ArrayList<Integer> IPRegarray = new ArrayList<>();
-//					file_io.filewrite2(OutFileName, "");
-					
-					for (int k = 0; k < set.length; k++) {
-						setarray.add(set[k]);
-						if (RemainRatio.get(k) >= threshold || RemainRatio.get(k + 1) >= threshold) {// 只要再生器前面或者后面有一段未充分使用则放置IP再生器
-							IPRegarray.add(set[k]);// 存储IP再生器放置节点
+					if(LinkOrRoute){//此处输入为linklist
+						RouteAndRegPlace rarp = new RouteAndRegPlace(linklistOfRoute, 0,0);
+						rarp.setnewFSnum(FStotal);
+						ArrayList<Integer> setarray = new ArrayList<>();
+						ArrayList<Integer> IPRegarray = new ArrayList<>();
+						
+						for (int k = 0; k < set.length; k++) {
+							setarray.add(set[k]);
+							if (RemainRatio.get(k) >= threshold || RemainRatio.get(k + 1) >= threshold) {// 只要再生器前面或者后面有一段未充分使用则放置IP再生器
+								IPRegarray.add(set[k]);// 存储IP再生器放置节点
+							}
 						}
+						rarp.setIPRegnode(IPRegarray);
+						rarp.setregnode(setarray);
+						rarp.setregnum(setarray.size());
+						rarp.setNumRemainFlow(NumRemainFlow);
+						regplaceoption.add(rarp);
+						file_io.filewrite2(OutFileName, "该路径成功RSA, 已成功RSA的条数为：" + regplaceoption.size());
 					}
-
-//					file_io.filewrite2(OutFileName, " ");
-					rarp.setIPRegnode(IPRegarray);
-					rarp.setregnode(setarray);
-					rarp.setregnum(setarray.size());
-					rarp.setNumRemainFlow(NumRemainFlow);
-					regplaceoption.add(rarp);
-					//System.out.println("该路径成功RSA, 已成功RSA的条数为：" + regplaceoption.size());// 再生器的个数加进去
-					file_io.filewrite2(OutFileName, "该路径成功RSA, 已成功RSA的条数为：" + regplaceoption.size());
+					if(!LinkOrRoute){
+						RouteAndRegPlace rarp = new RouteAndRegPlace(newRoute, 0);
+						rarp.setnewFSnum(FStotal);
+						ArrayList<Integer> setarray = new ArrayList<>();
+						ArrayList<Integer> IPRegarray = new ArrayList<>();
+						
+						for (int k = 0; k < set.length; k++) {
+							setarray.add(set[k]);
+							if (RemainRatio.get(k) >= threshold || RemainRatio.get(k + 1) >= threshold) {// 只要再生器前面或者后面有一段未充分使用则放置IP再生器
+								IPRegarray.add(set[k]);// 存储IP再生器放置节点
+							}
+						}
+						rarp.setIPRegnode(IPRegarray);
+						rarp.setregnode(setarray);
+						rarp.setregnum(setarray.size());
+						rarp.setNumRemainFlow(NumRemainFlow);
+						regplaceoption.add(rarp);
+						file_io.filewrite2(OutFileName, "该路径成功RSA, 已成功RSA的条数为：" + regplaceoption.size());
+					}
 				}
 			}
 		} // part1 finish
@@ -135,14 +150,10 @@ public class RegeneratorPlace {
 
 		for (RouteAndRegPlace DebugRegRoute : regplaceoption) {
 			file_io.filewrite2(OutFileName, " ");
-			//System.out.println();
-			//System.out.print("再生器放置位置： ");
 			file_io.filewrite_without(OutFileName, "再生器放置位置： ");
 			for (int Reg : DebugRegRoute.getregnode()) {
-				//System.out.print(Reg + "  ");
 				file_io.filewrite_without(OutFileName, Reg + "  ");
 			}
-			//System.out.println();
 			file_io.filewrite2(OutFileName, "  ");
 			if (DebugRegRoute.getIPRegnode().size() != 0) {
 				//System.out.print("IP再生器放置位置 ： ");
@@ -265,13 +276,16 @@ public class RegeneratorPlace {
 			}
 			nodepair.setFinalRoute(finalRoute);
 			RegeneratorPlace regp = new RegeneratorPlace();
-			regp.FinalRouteRSA(finalRoute, MixLayer, IPflow,RegLengthList,  rowList,ptOftransp);
+			if(LinkOrRoute)
+			regp.FinalRouteRSA(true, null, linklistOfRoute, MixLayer, IPflow,RegLengthList,ptOftransp);
+			else
+				regp.FinalRouteRSA(false, finalRoute, linklistOfRoute, MixLayer, IPflow,RegLengthList,ptOftransp);
 		}
 
 		if (regplaceoption.size() == 0) {
 			success = false;
 		}
-		//System.out.println();
+	 
 		if (success) {
 			//System.out.print("再生器放置成功并且RSA,放置的再生器个数为" + finalRoute.getregnum() + "  位置为：");
 			file_io.filewrite_without(OutFileName, "再生器放置成功并且RSA,放置的再生器个数为" + finalRoute.getregnum() + "  位置为：");
@@ -303,7 +317,6 @@ public class RegeneratorPlace {
 			file_io.filewrite2(OutFileName, "工作路径无法成功放置再生器");
 		}
 		return success;
-
 		// */
 		/*
 		 * 第一部分是通过距离来决定在哪里放置再生器 //
@@ -336,86 +349,7 @@ public class RegeneratorPlace {
 		 */
 
 	}
-
-	public void FinalRouteRSA(RouteAndRegPlace finalRoute, Layer oplayer, Layer ipLayer, int IPflow,ArrayList<Double>RegLengthList,
-			ArrayList<SlotUseOnWorkPhyLink> rowList,ParameterTransfer ptOftransp) {
-		// 这里需要将不同的再生器 构造不同的IP虚拟链路加入IP层
-		// IP再生器 两端需要加入两段虚拟链路 oeo再生器只需要加入一段虚拟链路
-		ArrayList<Link> phyLinklist=new ArrayList<>();
-		ParameterTransfer pt = new ParameterTransfer();
-		RegeneratorPlace rp=new RegeneratorPlace();
-		finalRoute.getRoute().OutputRoute_node(finalRoute.getRoute());
-		int count = 0;
-		double length2 = 0;
-		boolean regflag2 = false;
-		ArrayList<Link> linklist2 = new ArrayList<>();
-		file_out_put file_io = new file_out_put();
-		ArrayList<Double> ResFlowOnlinks=new ArrayList<Double>();
-		
-		pt.setStartNode(finalRoute.getRoute().getNodelist().get(0));// 首先设置该链路的起始节点
-		pt.setMinRemainFlowRSA(10000);//首先初始化
-		file_io.filewrite2(OutFileName, "");
-		
-		for (int i = 0; i < finalRoute.getregnum() + 1; i++) {
-			if (i >= finalRoute.getregnum())
-				regflag2 = true;
-			do {
-				Node nodeA = finalRoute.getRoute().getNodelist().get(count);
-				Node nodeB = finalRoute.getRoute().getNodelist().get(count + 1);
-				
-				Link link = oplayer.findLink(nodeA, nodeB);
-				//System.out.println("工作链路RSA：" + link.getName());
-				file_io.filewrite2(OutFileName, "工作链路RSA：" + link.getName());
-				length2 = length2 + link.getLength();
-				linklist2.add(link);
-				count = count + 1;
-				if (!regflag2) {// 未到达最后一段路径的RSA
-					if (count == finalRoute.getregnode().get(i)) {// 首先该点放置了再生器
-						pt.setEndNode(finalRoute.getRoute().getNodelist().get(count));//设置终止节点
-								if(count==1){//此时为transponder的发出链路
-								double costOfStart=rp.transpCostCal( length2 );
-								ptOftransp.setcost_of_tranp(ptOftransp.getcost_of_tranp()+costOfStart);
-								file_io.filewrite2(OutFileName, "transponder起点cost" + costOfStart+
-										"   此时transponder cost=" + ptOftransp.getcost_of_tranp());
-							}
-								// 该点放置了IP再生器
-						if (finalRoute.getIPRegnode().contains(count)) {
-							//这里用count计算transponder的cost
-						
-							modifylinkcapacity(true, IPflow, length2, linklist2, oplayer, ipLayer, pt,  rowList,ResFlowOnlinks,phyLinklist);
-							file_io.filewrite2(OutFileName, "本次RSA长度为：" + length2);
-							RegLengthList.add(length2);
-							length2 = 0;
-							linklist2.clear();
-							break;
-						}
-						// 该点放置纯OEO再生器
-						else {
-							modifylinkcapacity(false, IPflow, length2, linklist2, oplayer, ipLayer, pt, rowList,ResFlowOnlinks,phyLinklist);
-							RegLengthList.add(length2);
-							file_io.filewrite2(OutFileName, "本次RSA长度为：" + length2);
-							length2 = 0;
-							linklist2.clear();
-							break;
-						}
-					}
-				}
-				if (count == finalRoute.getRoute().getNodelist().size() - 1) {// 最后一个再生器和终点之间的RSA
-					double costOfEnd=rp.transpCostCal( length2 );
-					ptOftransp.setcost_of_tranp(ptOftransp.getcost_of_tranp()+costOfEnd);
-					file_io.filewrite2(OutFileName, "transponder终点cost" + costOfEnd+
-							"   此时transponder cost=" + ptOftransp.getcost_of_tranp());
-					pt.setEndNode(finalRoute.getRoute().getNodelist().get(count));//设置终止节点
-					modifylinkcapacity(true, IPflow, length2, linklist2, oplayer, ipLayer, pt, rowList,ResFlowOnlinks,phyLinklist);// 此时在n点放置再生器
-					RegLengthList.add(length2);
-					file_io.filewrite2(OutFileName, "本次RSA长度为：" + length2);
-					linklist2.clear();
-				}
-			} while (count != finalRoute.getRoute().getNodelist().size() - 1);
-		}
-	}
-
-	public Boolean vertify(int IPflow, double routelength, ArrayList<Link> linklist, Layer oplayer, Layer iplayer,
+	public Boolean vertify(double IPflow, double routelength, ArrayList<Link> linklist, Layer MixLayer,
 			ArrayList<WorkandProtectRoute> wprlist, NodePair nodepair, ParameterTransfer RemainRatio) {
 		// 判断某一段transparent链路是否能够成功RSA 并且记录新使用的FS数量和该链路上的剩余容量
 
@@ -462,19 +396,96 @@ public class RegeneratorPlace {
 		}
 		return opworkflag;
 	}
+	public void FinalRouteRSA(Boolean LinkOrRoute,RouteAndRegPlace finalRoute, ArrayList<Link> linklistOfRoute,Layer MixLayer, double IPflow,ArrayList<Double>RegLengthList,ParameterTransfer ptOftransp) {
+		// 这里需要将不同的再生器 构造不同的IP虚拟链路加入IP层
+		// IP再生器 两端需要加入两段虚拟链路 oeo再生器只需要加入一段虚拟链路
+		ArrayList<Link> phyLinklist=new ArrayList<>();
+		ParameterTransfer pt = new ParameterTransfer();
+		RegeneratorPlace rp=new RegeneratorPlace();
+		int count = 0;
+		double length2 = 0;
+		boolean regflag2 = false;
+		ArrayList<Link> linklist2 = new ArrayList<>();
+		file_out_put file_io = new file_out_put();
+		ArrayList<Double> ResFlowOnlinks=new ArrayList<Double>();
+		
+		pt.setStartNode(finalRoute.getRoute().getNodelist().get(0));// 首先设置该链路的起始节点
+		pt.setMinRemainFlowRSA(10000);//首先初始化
+		file_io.filewrite2(OutFileName, "");
+		
+		for (int i = 0; i < finalRoute.getregnum() + 1; i++) {
+			if (i >= finalRoute.getregnum())
+				regflag2 = true;
+			do {
+				Link link_loop=new Link(null, 0, null, MixLayer, null, null, 0, 0);
+				if(LinkOrRoute)
+					link_loop=linklistOfRoute.get(count);
+				else{
+					link_loop=finalRoute.getRoute().getLinklist().get(count);
+				}
+				//System.out.println("工作链路RSA：" + link.getName());
+				file_io.filewrite2(OutFileName, "工作链路RSA：" + link_loop.getName());
+				length2 = length2 + link_loop.getLength();
+				linklist2.add(link_loop);
+				count = count + 1;
+				if (!regflag2) {// 未到达最后一段路径的RSA
+					if (count == finalRoute.getregnode().get(i)) {// 首先该点放置了再生器
+						pt.setEndNode(finalRoute.getRoute().getNodelist().get(count));//设置终止节点
+								if(count==1){//此时为transponder的发出链路
+								double costOfStart=rp.transpCostCal( length2 );
+								ptOftransp.setcost_of_tranp(ptOftransp.getcost_of_tranp()+costOfStart);
+								file_io.filewrite2(OutFileName, "transponder起点cost" + costOfStart+
+										"   此时transponder cost=" + ptOftransp.getcost_of_tranp());
+							}
+								// 该点放置了IP再生器
+						if (finalRoute.getIPRegnode().contains(count)) {
+							//这里用count计算transponder的cost
+							modifylinkcapacity(true, IPflow, length2, linklist2, MixLayer, pt,ResFlowOnlinks,phyLinklist);
+							file_io.filewrite2(OutFileName, "本次RSA长度为：" + length2);
+							RegLengthList.add(length2);
+							length2 = 0;
+							linklist2.clear();
+							break;
+						}
+						// 该点放置纯OEO再生器
+						else {
+							modifylinkcapacity(false, IPflow, length2, linklist2, MixLayer, pt,ResFlowOnlinks,phyLinklist);
+							RegLengthList.add(length2);
+							file_io.filewrite2(OutFileName, "本次RSA长度为：" + length2);
+							length2 = 0;
+							linklist2.clear();
+							break;
+						}
+					}
+				}
+				if (count == finalRoute.getRoute().getNodelist().size() - 1) {// 最后一个再生器和终点之间的RSA
+					double costOfEnd=rp.transpCostCal( length2 );
+					ptOftransp.setcost_of_tranp(ptOftransp.getcost_of_tranp()+costOfEnd);
+					file_io.filewrite2(OutFileName, "transponder终点cost" + costOfEnd+
+							"   此时transponder cost=" + ptOftransp.getcost_of_tranp());
+					pt.setEndNode(finalRoute.getRoute().getNodelist().get(count));//设置终止节点
+					modifylinkcapacity(true, IPflow, length2, linklist2,MixLayer, pt,ResFlowOnlinks,phyLinklist);// 此时在n点放置再生器
+					RegLengthList.add(length2);
+					file_io.filewrite2(OutFileName, "本次RSA长度为：" + length2);
+					linklist2.clear();
+				}
+			} while (count != finalRoute.getRoute().getNodelist().size() - 1);
+		}
+	}
 
-	public boolean modifylinkcapacity(Boolean IPorOEO, int IPflow, double routelength, ArrayList<Link> linklist,
-			Layer oplayer, Layer iplayer, ParameterTransfer pt,ArrayList<SlotUseOnWorkPhyLink> rowList,ArrayList<Double> ResFlowOnlinks,ArrayList<Link> phyLinklist) {// true表示IP再生器
+	
+
+	public boolean modifylinkcapacity(Boolean IPorOEO, double IPflow, double routelength, ArrayList<Link> linklist,
+			Layer MixLayer, ParameterTransfer pt,ArrayList<Double> ResFlowOnlinks,ArrayList<Link> phyLinklist) {// true表示IP再生器
 																	// false表示纯OEO再生器
 		double X = 1;
 		int slotnum = 0;
 		boolean opworkflag = false;
 		file_out_put file_io = new file_out_put();
-		Node srcnode = new Node(null, 0, null, iplayer, 0, 0);
-		Node desnode = new Node(null, 0, null, iplayer, 0, 0);
+		Node srcnode = new Node(null, 0, null, MixLayer, 0, 0);
+		Node desnode = new Node(null, 0, null, MixLayer, 0, 0);
 		double resflow=0;
 		if (routelength > 4000) {
-			//System.out.println("链路过长无法RSA");
 			file_io.filewrite2(OutFileName, "链路过长无法RSA");
 		}
 		if (routelength < 4000) {
@@ -497,22 +508,17 @@ public class RegeneratorPlace {
 			if(RemainFlow<pt.getMinRemainFlowRSA()){//若中间经过OEO再生器那么存储剩余较小的flow
 				pt.setMinRemainFlowRSA(RemainFlow);
 			}
-//			System.out.println("此时的最小剩余容量为：" + pt.getMinRemainFlowRSA());
 			
 			// 计算所需要的FS数 并且观察每段链路上可用的频谱窗
-//			System.out.println("该链路所需slot数： " + slotnum);
 			file_io.filewrite2(OutFileName, "该链路所需slot数： " + slotnum);
 			ArrayList<Integer> index_wave = new ArrayList<Integer>();
 			MainOfAulixiaryRegenetor spa = new MainOfAulixiaryRegenetor();
 			index_wave = spa.spectrumallocationOneRoute(false, null, linklist, slotnum);
 			if (index_wave.size() == 0) {
-				//System.out.println("路径堵塞 ，不分配频谱资源");
 				file_io.filewrite2(OutFileName, "路径堵塞 ，不分配频谱资源");
 			} else {
-				
-				SlotUseOnWorkPhyLink row=new SlotUseOnWorkPhyLink(null, null, 0, 0);
 				opworkflag = true;
-				double length1 = 0;
+				int length1 = 0;
 				double cost = 0;
 				file_io.filewrite_without(OutFileName, "光层分配频谱：");
 				file_io.filewrite2(OutFileName, "FS起始值：" + index_wave.get(0) + "  长度" + slotnum);
@@ -523,13 +529,7 @@ public class RegeneratorPlace {
 					Request request = null;
 					ResourceOnLink ro = new ResourceOnLink(request, link, index_wave.get(0), slotnum);
 					link.setMaxslot(slotnum + link.getMaxslot());
-					row.setWorkLink(link);row.setWorkRequest(request);
-					row.setStartFS(index_wave.get(0)); row.setSlotNum(slotnum);
-					rowList.add(row);
 					phyLinklist.add(link);//记录建立的虚拟链路对应的物理链路
-//					System.out.println();
-//					System.out.println("链路 " + link.getName() + "的最大slot是： " + link.getMaxslot() + " 可用频谱窗数："
-//							+ link.getSlotsindex().size());
 				}
 
 				if (IPorOEO) {// true的时候表示放置的是IP再生器 需要在IP层建立链路
@@ -539,13 +539,12 @@ public class RegeneratorPlace {
 					Node endnode = pt.getEndNode();
 					
 					// 	在IP层中寻找transparent链路的两端
-					for (int num = 0; num < iplayer.getNodelist().size() - 1; num++) {
+					for (int num = 0; num < MixLayer.getNodelist().size() - 1; num++) {
 						boolean srcflag = false, desflag = false;
-						HashMap<String, Node> map = iplayer.getNodelist();
+						HashMap<String, Node> map = MixLayer.getNodelist();
 						Iterator<String> iter = map.keySet().iterator();
 						while (iter.hasNext()) {
 							Node node = (Node) (map.get(iter.next()));
-
 							if (node.getName().equals(startnode.getName())) {
 								srcnode = node;
 								srcflag = true;
@@ -566,20 +565,7 @@ public class RegeneratorPlace {
 					}
 					
 					String name = srcnode.getName() + "-" + desnode.getName();
-					int index = iplayer.getLinklist().size();// 因为iplayer里面的link是一条一条加上去的故这样设置index
-
-					Link finlink = iplayer.findLink(srcnode, desnode);
-					Link createlink = new Link(null, 0, null, iplayer, null, null, 0, 0);
-					boolean findflag = false;
-					try {
-						System.out.println(finlink.getName());
-						file_io.filewrite2(OutFileName,finlink.getName());
-						findflag = true;
-					} catch (java.lang.NullPointerException ex) {
-						createlink = new Link(name, index, null, iplayer, srcnode, desnode, length1, cost);
-						iplayer.addLink(createlink);
-					}
-
+					int index = MixLayer.getLinklist().size();// 因为iplayer里面的link是一条一条加上去的故这样设置index
 					double minflow=10000;
 					for(double resflow2:ResFlowOnlinks){//寻找不同链路上剩余流量最小的链路
 						if(minflow>resflow2){
@@ -587,26 +573,14 @@ public class RegeneratorPlace {
 						}
 					}
 					ResFlowOnlinks.clear();
-					VirtualLink Vlink = new VirtualLink(srcnode.getName(), desnode.getName(), 0, 0);
-					Vlink.setnature(0);
-					Vlink.setRestcapacity(minflow);
-					Vlink.setcost(cost);
-					Vlink.setPhysicallink(phyLinklist);
+					Link createlink = new Link(name, index, null, MixLayer, srcnode, desnode, length1, cost);
+					createlink.setnature_IPorOP(Constant.NATURE_IP);
+					createlink.setnature_WorkOrPro(Constant.NATURE_WORK);
+					createlink.setCost(cost);
+					createlink.setPhysicallink(phyLinklist);
+					createlink.setRestcapacity(minflow);
 					phyLinklist.clear();
-					
-					if (findflag) {// 如果在IP层中已经找到该链路
-						finlink.getVirtualLinkList().add(Vlink);
-						file_io.filewrite2(OutFileName,"IP层已存在的链路 " + finlink.getName() +  "    预留的flow：  " + Vlink.getRestcapacity());
-						//System.out.println("工作链路在光层新建的链路：  " + finlink.getName() + "  上的虚拟链路条数： "
-								//+ finlink.getVirtualLinkList().size());
-						file_io.filewrite2(OutFileName, "工作链路在光层新建的链路：  " + finlink.getName() + "  上的虚拟链路条数： "
-								+ finlink.getVirtualLinkList().size());
-					} else {
-						createlink.getVirtualLinkList().add(Vlink);
-						file_io.filewrite2(OutFileName,"IP层上新建链路 " + createlink.getName() + "    预留的flow：  " + Vlink.getRestcapacity());
-						file_io.filewrite2(OutFileName, "工作链路在光层新建的链路：  " + createlink.getName() + "  上的虚拟链路条数： "
-								+ createlink.getVirtualLinkList().size());
-					}
+					MixLayer.addLink(createlink);
 					//以上已经成功建立IP虚拟链路 要更改此次的终止节点为下次的起始节点 并且初始化链路上最小剩余容量
 					pt.setMinRemainFlowRSA(10000);
 				}

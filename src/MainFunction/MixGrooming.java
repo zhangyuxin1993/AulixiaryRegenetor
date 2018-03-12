@@ -12,19 +12,17 @@ import network.Layer;
 import network.Link;
 import network.Node;
 import network.NodePair;
-import network.VirtualLink;
 import resource.ResourceOnLink;
 import subgraph.LinearRoute;
 
 public class MixGrooming {
 	String OutFileName = MainOfAulixiaryRegenetor.OutFileName;
 
-	public void MixGrooming(NodePair nodepair, Layer MixLayer, double UnfishFlow,
-			ArrayList<FlowUseOnLink> flowuseonlink, ArrayList<SlotUseOnWorkPhyLink> rowList,
-			ParameterTransfer ptoftransp) {
-
+	public boolean MixGrooming(NodePair nodepair, Layer MixLayer, double UnfishFlow,ParameterTransfer ptoftransp,ArrayList<Double>RegLengthList,
+			ArrayList<WorkandProtectRoute> wprlist,float threshold,ArrayList<Link> totallink,ArrayList<FlowUseOnLink> fuoList) {
 		file_out_put file_io = new file_out_put();
 		RouteSearching Dijkstra = new RouteSearching();
+		boolean routeFlag=false;
 
 		// 找到的路由中必须含有虚拟链路
 		// 因为只能选取一条路由 mixgrooming 所以此时要删除容量不够的虚拟链路
@@ -33,8 +31,10 @@ public class MixGrooming {
 		Iterator<String> linkitor2 = linklist.keySet().iterator();
 		while (linkitor2.hasNext()) {
 			Link linkInMixlayer = (Link) (linklist.get(linkitor2.next()));
-			if (linkInMixlayer.getRestcapacity() < UnfishFlow) {
-				DelLackCapLink.add(linkInMixlayer);
+			if(linkInMixlayer.getnature_IPorOP()==Constant.NATURE_IP){
+				if (linkInMixlayer.getRestcapacity() < UnfishFlow) {
+					DelLackCapLink.add(linkInMixlayer);
+				}
 			}
 		}
 		for (Link delLink : DelLackCapLink) {
@@ -54,11 +54,15 @@ public class MixGrooming {
 				}
 				if (IPFlag) {// 只有当路由中含有IP链路时才会进行分配
 					// 寻找路由上所有的IP链路中流量最小的业务
+					totallink.clear();
 					ArrayList<Link> IPLinkOnRoute = new ArrayList<>();
 					ArrayList<Link> OPLinkOnRoute = new ArrayList<>();
 					for (Link LinkOnRoute : route.getLinklist()) {
-						if (LinkOnRoute.getnature_IPorOP() == Constant.NATURE_IP)
+						if (LinkOnRoute.getnature_IPorOP() == Constant.NATURE_IP){
 							IPLinkOnRoute.add(LinkOnRoute);
+							for(Link phyLink: LinkOnRoute.getPhysicallink())
+								totallink.add(phyLink);
+						}
 						else
 							OPLinkOnRoute.add(LinkOnRoute);
 					}
@@ -72,27 +76,39 @@ public class MixGrooming {
 
 					// IP路由上的剩余容量大于未完成流量 下面要给物理链路分配FS
 					MixGrooming mg = new MixGrooming();
-					mg.AssignFSforPhyLink(OPLinkOnRoute, UnfishFlow, ptoftransp, rowList,MixLayer);
-
+					routeFlag=mg.AssignFSforPhyLinkAndIPLinkStab(OPLinkOnRoute, UnfishFlow, ptoftransp,MixLayer, wprlist, nodepair, RegLengthList, threshold);
+					
+					if(routeFlag){//说明此时物理链路路由成功 则要改变虚拟链路上的容量
+						for(Link link: OPLinkOnRoute)//路由成功时需要将物理链路对应的路由也加入totallink
+							totallink.add(link);
+						for(Link ModifyCapLink: IPLinkOnRoute){
+							ModifyCapLink.setRestcapacity(ModifyCapLink.getRestcapacity()-UnfishFlow);
+						}
+						break;//找到一条成功的路由就跳出 first-fit
+					}
 				}
 			}
 		} else {
-			System.out.println("MixGrooming无法成功路由");
+			System.out.println("MixGrooming没有找到路由");
 		}
+		for(Link recLink:DelLackCapLink){//恢复开始删去的链路
+			MixLayer.addLink(recLink);
+		}
+		return routeFlag;
+ 
 	}
 
-	public void AssignFSforPhyLink(ArrayList<Link> OPLinkOnRoute, double UnfishFlow, ParameterTransfer ptoftransp,
-			ArrayList<SlotUseOnWorkPhyLink> rowList, Layer MixLayer) {
+	public boolean AssignFSforPhyLinkAndIPLinkStab(ArrayList<Link> OPLinkOnRoute, double UnfishFlow, ParameterTransfer ptoftransp, 
+			Layer MixLayer,ArrayList<WorkandProtectRoute> wprlist,NodePair nodepair,ArrayList<Double>RegLengthList,float threshold) {
 		boolean routeFlag = false;
 		file_out_put file_io = new file_out_put();
-		int routelength = 0, slotnum = 0;
+		int routelength = 0, slotnum = 0,cost=0;
 		double X = 1;
 		for (Link link : OPLinkOnRoute) {
 			routelength = routelength + link.getLength();
+			cost=(int) (cost+link.getCost());
 		}
-		int cost = routelength;
 		if (routelength <=4000) {// 找到的路径不需要再生器
-			routeFlag = true;
 			double costOftransp = 0;
 			if (routelength > 2000 && routelength <= 4000) {
 				costOftransp = Constant.Cost_IP_reg_BPSK;
@@ -122,10 +138,10 @@ public class MixGrooming {
 			index_wave = spa.spectrumallocationOneRoute(false, null, OPLinkOnRoute, slotnum);
 
 			if (index_wave.size() == 0) {
-				// System.out.println("路径堵塞 ，不分配频谱资源");
+				routeFlag=false;
 				file_io.filewrite2(OutFileName, "Mixgrooming 物理路径堵塞 ，无法分配频谱资源");
 			} else {
-				SlotUseOnWorkPhyLink row = new SlotUseOnWorkPhyLink(null, null, 0, 0);
+				routeFlag=true;
 				file_io.filewrite2(OutFileName, "");
 				file_io.filewrite2(OutFileName, "MixGrooming 物理路由路径FS：");
 				file_io.filewrite2(OutFileName, "FS起始值：" + index_wave.get(0) + "  长度" + slotnum);
@@ -136,11 +152,6 @@ public class MixGrooming {
 					length1 = length1 + link.getLength();
 					Request request = null;
 					ResourceOnLink ro = new ResourceOnLink(request, link, index_wave.get(0), slotnum);
-					row.setWorkLink(link);
-					row.setWorkRequest(request);
-					row.setStartFS(index_wave.get(0));
-					row.setSlotNum(slotnum);
-					rowList.add(row);
 					link.setMaxslot(slotnum + link.getMaxslot());
 				} // 改变物理层上的链路FS分配 以便于下一次新建时分配slot
 
@@ -162,8 +173,8 @@ public class MixGrooming {
 					desnode_name = link4.getNodeA().getName();
 
 				String name = srcnode_name + desnode_name;
-				int index = ptoftransp.getNumOfVirtLink() + 1;
-				ptoftransp.setNumOfVirtLink(index);
+				int index = ptoftransp.getNumOfLink() + 1;
+				ptoftransp.setNumOfLink(index);
 
 				Node srcnode = MixLayer.getNodelist().get(srcnode_name);
 				Node desnode = MixLayer.getNodelist().get(desnode_name);
@@ -184,7 +195,10 @@ public class MixGrooming {
 		}
 		else if(routelength>4000){
 			//此时需要放置再生器
+			RegeneratorPlace rp=new RegeneratorPlace();
+			routeFlag = rp.regeneratorplace(UnfishFlow, routelength, true, null, OPLinkOnRoute, MixLayer, wprlist, nodepair, RegLengthList, threshold, ptoftransp);
 			
 		}
+		return routeFlag;
 	}
 }

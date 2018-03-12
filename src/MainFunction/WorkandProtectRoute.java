@@ -2,12 +2,10 @@
 package MainFunction;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import demand.Request;
 import network.Link;
 import network.NodePair;
-import network.VirtualLink;
 import subgraph.LinearRoute;
 
 public class WorkandProtectRoute {//一条业务工作路径 保护路径 以及上面使用的再生器节点
