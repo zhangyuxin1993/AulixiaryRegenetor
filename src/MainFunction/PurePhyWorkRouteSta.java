@@ -31,16 +31,18 @@ public class PurePhyWorkRouteSta {
 	 
 		file_io.filewrite2(OutFileName, " ");
 		ArrayList<LinearRoute> routeList = new ArrayList<>();
-		file_io.filewrite2(OutFileName, "纯物理链路工作路由建立");
+		file_io.filewrite2(OutFileName, "纯物理链路工作路由尝试建立");
 
 		//需要使用纯物理路由 则此时应当删除属性为虚拟
 		int index= ptoftransp.getNumOfLink() + 1;
 		ptoftransp.setNumOfLink(index);
+		String index_inName=String.valueOf(index);
 		ArrayList<Link> DelAllIPLink=new ArrayList<>();
 		HashMap<String,Link> linklist=MixLayer.getLinklist();
 	     Iterator<String> iter1=linklist.keySet().iterator();
 	     while(iter1.hasNext()){
 	    	 Link link=(Link)(linklist.get(iter1.next()));
+	    	 if(link.getnature_IPorOP()==Constant.NATURE_BOUND) continue;
 	    	 if(link.getnature_IPorOP()==Constant.NATURE_IP){
 	    		 DelAllIPLink.add(link);
 	    	 }
@@ -49,6 +51,7 @@ public class PurePhyWorkRouteSta {
 				MixLayer.removeLink(delLink);
 			}
 	     
+			
 		// 在光层新建光路的时候不需要考虑容量的问题
 		LinearRoute opnewRoute=new LinearRoute(null, 0, null);
 		Dijkstra.Kshortest(srcnode, desnode, MixLayer, 10, routeList);
@@ -94,7 +97,7 @@ public class PurePhyWorkRouteSta {
 					ptoftransp.setcost_of_tranp(ptoftransp.getcost_of_tranp()+costOftransp*2);
 					file_io.filewrite2(OutFileName, "");
 					file_io.filewrite2(OutFileName, "纯物理链路工作路径不需要再生器时 cost of transponder" + costOftransp*2
-							+"transponder cost="+ ptoftransp.getcost_of_tranp());
+							+"   total transponder cost="+ ptoftransp.getcost_of_tranp());
 					
 					if (slotnum < Constant.MinSlotinLightpath) {
 						slotnum = Constant.MinSlotinLightpath;
@@ -112,7 +115,7 @@ public class PurePhyWorkRouteSta {
 						file_io.filewrite2(OutFileName, "工作链路不需要再生器时在光层分配频谱：");
 						file_io.filewrite2(OutFileName, "FS起始值：" + index_wave.get(0) + "  长度" + slotnum);
 						opworkflag = true;
-						int length1 = 0;
+						float length1 = 0;
 						double cost = 0;
 
 						for (Link link : opnewRoute.getLinklist()) {// 物理层的link
@@ -124,15 +127,50 @@ public class PurePhyWorkRouteSta {
 							link.setMaxslot(slotnum + link.getMaxslot());
 						} // 改变物理层上的链路容量 以便于下一次新建时分配slot
 
-						String name = srcnode.getName() + "-" + desnode.getName();
-
-						Link createlink = new Link(name, index, null, MixLayer, srcnode, desnode, length1, cost);
+				
+						
+						Node helpNode=new Node(null, index, null, MixLayer, 0, 0); // 这里将helpNode设置为中间辅助节点
+						helpNode.setName(srcnode.getName()+"("+index_inName+")");
+						MixLayer.addNode(helpNode);
+						length1=length1/1000;
+						cost=cost/1000;
+						
+						String name = null;
+						Link createlink=new Link(null, 0, null, null, null, null, 0, 0);
+						if (desnode.getIndex() < helpNode.getIndex()){
+							// 确定添加的虚拟路径的名字
+							name = desnode.getName() +"-"+ helpNode.getName();
+							createlink = new Link(name, index, null, MixLayer, desnode, helpNode, length1, cost);
+						}
+						else{
+							name = helpNode.getName() +"-"+ desnode.getName() ;
+							createlink = new Link(name, index, null, MixLayer,helpNode, desnode,  length1, cost);
+						}
+						
 						createlink.setnature_IPorOP(Constant.NATURE_IP);
 						createlink.setnature_WorkOrPro(Constant.NATURE_WORK);
 						createlink.setFullcapacity(slotnum * X);// 多出来的flow是从这里产生的
 						createlink.setRestcapacity(createlink.getFullcapacity() - IPflow );
 						createlink.setPhysicallink(opnewRoute.getLinklist());
 						MixLayer.addLink(createlink);
+						file_io.filewrite2(OutFileName, "建立虚拟链路" +createlink.getName()+" 剩余容量"+ createlink.getRestcapacity());
+						
+						String boundLink_name = null;
+						Link boundlink=new Link(null, 0, null, null, null, null, 0, 0);
+						if (srcnode.getIndex() < helpNode.getIndex()){
+							// 确定添加的虚拟路径的名字
+							boundLink_name = srcnode.getName() +"-"+ helpNode.getName();
+							boundlink = new Link(boundLink_name, index, null, MixLayer, srcnode, helpNode, 0, 0);
+						}
+						else{
+							boundLink_name = helpNode.getName() +"-"+ srcnode.getName() ;
+							boundlink = new Link(boundLink_name, index, null, MixLayer,helpNode, srcnode, 0, 0);
+						}
+						
+						boundlink.setnature_IPorOP(Constant.NATURE_BOUND);
+						boundlink.setnature_WorkOrPro(Constant.NATURE_BOUND);
+						boundlink.setRestcapacity(0);
+						MixLayer.addLink(boundlink);
 					}
 				}
 				if (routelength > 4000) {
@@ -144,7 +182,7 @@ public class PurePhyWorkRouteSta {
 			
 			if (opworkflag) {
 				ptoftransp.setNumOfTransponder(ptoftransp.getNumOfTransponder()+2);//工作光路建立成功
-				file_io.filewrite2(OutFileName, "工作路径在光层成功路由并且RSA");
+				file_io.filewrite2(OutFileName, "工作路径纯物理路径路由成功并且RSA");
 				WorkandProtectRoute wpr = new WorkandProtectRoute(nodepair);
 				Request re = new Request(nodepair);
 				ArrayList<Link> totallink = new ArrayList<>();
@@ -157,7 +195,7 @@ public class PurePhyWorkRouteSta {
 
 			}
 			if (!opworkflag) {
-				file_io.filewrite2(OutFileName, "保护路径在光层无法建立");
+				file_io.filewrite2(OutFileName, "工作路径纯物理链路路由失败");
 			}
 		}
 		for(Link link:DelAllIPLink){//恢复所有的虚拟链路

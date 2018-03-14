@@ -18,9 +18,9 @@ public class MainOfAulixiaryRegenetor {
 	public static String OutFileName = "D:\\zyx\\programFile\\RegwithProandTrgro\\6.dat";
 
 	public static void main(String[] args) throws IOException {
-		String TopologyName = "D:/zyx/Topology/6.csv";
+		String TopologyName = "D:/zyx/Topology/cost239.csv";
 		// String TopologyName = "F:/zyx/Topology/cost239.csv";
-		int DemandNum = 1;
+		int DemandNum = 15;
 		ParameterTransfer pt = new ParameterTransfer();
 		file_out_put file_io = new file_out_put();
 		MainOfAulixiaryRegenetor mm = new MainOfAulixiaryRegenetor();
@@ -35,37 +35,32 @@ public class MainOfAulixiaryRegenetor {
 		dr.TrafficNumRadom(RadomNodepairlist); // 随机产生节点对业务
 
 		// 以下可以读取表格中的业务
-		// RadomNodepairlist=rd.readDemand(iplayer_base,
-		// "f:\\zyx\\USNETTraffic.csv");
-		// ReadDemand rd=new ReadDemand();
-		// RadomNodepairlist=rd.readDemand(iplayer_base,
-		// "D:\\ZYX\\cost239Traffic.csv");
+//		 ReadDemand rd=new ReadDemand();
+//		 RadomNodepairlist=rd.readDemand(MixLayer_base,"D:\\6traffic.csv");
 
 		/*
 		 * 设置threshold循环
 		 */
-		for (float threshold = (float) 0; threshold <= 1.05; threshold = (float) (threshold + 0.1)) {
+		for (float threshold = (float) 0.5; threshold <= 1; threshold = (float) (threshold +0.8)) {
 			double bestResult = 100000;
 			int bestshuffle = 1000, NumOfIPreg = 0, NumofOEOreg = 0;
 			int bestSingleshuffle = 0, bestAllshuffle = 0;
 			int MinSlotofAllShuffleOnSingleLink = 10000;
 			int MinSlotofAllShuffleofAllLink = 10000;
 
-			for (int shuffle = 0; shuffle < 50; shuffle++) {// 打乱次序100次
+			for (int shuffle = 0; shuffle < 1; shuffle++) {// 打乱次序100次
 				ArrayList<WorkandProtectRoute> wprlist = new ArrayList<>();
 				double TotalWorkCost = 0, TotalProCost = 0;
 				pt.setNumOfTransponder(0);
 				pt.setcost_of_tranp(0);
 				
-				file_io.filewrite2(OutFileName, " ");
-				file_io.filewrite2(FinalResultFile, " ");
 				file_io.filewrite2(OutFileName, "threshold=" + threshold);
 				file_io.filewrite2(FinalResultFile, "threshold=" + threshold);
 				file_io.filewrite2(OutFileName, "shuffle=" + shuffle);
 				file_io.filewrite2(FinalResultFile, "shuffle=" + shuffle);
 				
 
-				Collections.shuffle(RadomNodepairlist);// 打乱产生的业务100次
+//				Collections.shuffle(RadomNodepairlist);// 打乱产生的业务100次
 				for (NodePair nodepair : RadomNodepairlist) {
 					System.out.println("节点对  " + nodepair.getName() + "  流量：" + nodepair.getTrafficdemand());
 					file_io.filewrite2(FinalResultFile,"节点对  " + nodepair.getName() + "  流量：" + nodepair.getTrafficdemand());
@@ -84,21 +79,24 @@ public class MainOfAulixiaryRegenetor {
 
 				for (int n = 0; n < demandlist.size(); n++) {
 					NodePair nodepair = demandlist.get(n);
-					file_io.filewrite2(OutFileName, "");
-					file_io.filewrite2(OutFileName, "");
 					if (nodepair.getTrafficdemand() < 50) {// 业务量低于50G的业务不建立通道
 						SmallNodePairList.add(nodepair);
 						continue;
 					}
+					file_io.filewrite2(OutFileName, "");
+					file_io.filewrite2(OutFileName,"");
 					file_io.filewrite2(OutFileName,"正在操作的节点对： " + nodepair.getName() + "  他的流量需求是： " + nodepair.getTrafficdemand());
+					System.out.println("正在操作的节点对： " + nodepair.getName() + "  他的流量需求是： " + nodepair.getTrafficdemand());
 					file_io.filewrite2(OutFileName, "Total numberof transponder " + pt.getNumOfTransponder());
 				
 					mm.mainMethod(nodepair, MixLayer, pt, threshold, wprlist);
 				}
 				if (SmallNodePairList != null && SmallNodePairList.size() != 0) {
 					for (NodePair smallnodepair : SmallNodePairList) {
+						
 						file_io.filewrite2(OutFileName, "");
 						file_io.filewrite2(OutFileName, "");
+						System.out.println("正在操作的节点对： " + smallnodepair.getName() + "  他的流量需求是： " + smallnodepair.getTrafficdemand());
 						file_io.filewrite2(OutFileName, "正在操作的节点对： " + smallnodepair.getName() + "  他的流量需求是： "
 								+ smallnodepair.getTrafficdemand());
 						file_io.filewrite2(OutFileName, "Total numberof transponder " + pt.getNumOfTransponder());
@@ -108,7 +106,7 @@ public class MainOfAulixiaryRegenetor {
 			}
 		}
 		// 输出结果
-
+		System.out.println("Finish");
 	}
 
 	private  void init(Layer MixLayer,ParameterTransfer ptoftransp) {
@@ -117,6 +115,7 @@ public class MainOfAulixiaryRegenetor {
 	     while(iter1.hasNext()){
 	    	 Link link=(Link)(LinkList.get(iter1.next()));
 	    	 link.setnature_IPorOP(Constant.NATURE_OP);
+	    	 link.setnature_WorkOrPro(Constant.NATURE_PHY);
 	    	 link.setRestcapacity(0);
 	     }
 	     ptoftransp.setNumOfLink(MixLayer.getLinklist().size());
@@ -125,7 +124,18 @@ public class MainOfAulixiaryRegenetor {
 	}
 
 	public void mainMethod(NodePair nodepair, Layer MixLayer, ParameterTransfer ptoftransp, float threshold,ArrayList<WorkandProtectRoute> wprlist) throws IOException {
-		
+		//debug
+		file_out_put file_io = new file_out_put();
+		HashMap<String,Link> Linklist=MixLayer.getLinklist();
+	     Iterator<String> iter1=Linklist.keySet().iterator();
+	     file_io.filewrite2(OutFileName,"链路条数"+Linklist.size());
+	     while(iter1.hasNext()){
+	    	 Link link=(Link)(Linklist.get(iter1.next()));
+	    	 file_io.filewrite2(OutFileName,"链路"+link.getName()+ "  属性 "+ link.getnature_IPorOP()+ "  "+ link.getnature_WorkOrPro()
+	    	 +"  剩余"+ link.getRestcapacity());
+	     }
+	     
+	     
 		WorkRouteStab wrs=new WorkRouteStab();
 		wrs.WorkRouteStab(nodepair, MixLayer, wprlist, ptoftransp, threshold);
 
@@ -179,6 +189,15 @@ public class MainOfAulixiaryRegenetor {
 		} else {
 			linklistOnroute = linklist;
 		}
+		ArrayList<Link> NoAssignLink=new ArrayList<>();
+		for(Link link:linklistOnroute){
+			if(link.getnature_IPorOP()==Constant.NATURE_BOUND){
+				NoAssignLink.add(link);
+			}
+		}
+		for(Link delLink: NoAssignLink){
+			linklistOnroute.remove(delLink);
+		}//check 观察能不能移除该链路
 		for (Link link : linklistOnroute) {
 			link.getSlotsindex().clear();
 

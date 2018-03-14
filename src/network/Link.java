@@ -14,7 +14,7 @@ public class Link extends CommonObject{
 	private Layer associatedLayer = null; //the layer that the link belongs to
 	private Node nodeA = null; //node A
 	private Node nodeB = null; //node B
-	private int length = 0; //physical distance of the link
+	private float length = 0; //physical distance of the link
 	private double cost = 0;// the cost of the link
 	private int status = Constant.UNVISITED;//the visited status	 	 
 	private int[] wavestatus = new int[Constant.WAVE_PRE_FIBER]; //链路的波长占用状态
@@ -109,7 +109,7 @@ public class Link extends CommonObject{
 	public void setNodeB(Node nodeB) {
 		this.nodeB = nodeB;
 	}
-	public int getLength() {
+	public float getLength() {
 		return length;
 	}
 	public void setLength(int length) {
@@ -169,7 +169,7 @@ public class Link extends CommonObject{
 	}
 	
 	public Link(String name, int index, String comments, Layer associatedLayer,
-			Node nodeA, Node nodeB, int length, double cost) {
+			Node nodeA, Node nodeB, float length, double cost) {
 		super(name, index, comments);
 		this.associatedLayer = associatedLayer;
 		this.nodeA = nodeA;

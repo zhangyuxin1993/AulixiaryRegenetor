@@ -27,21 +27,42 @@ public class FlowSplitting {
 		double UnfinishFLow = nodepair.getTrafficdemand();
 		Node srcnode = nodepair.getSrcNode();
 		Node desnode = nodepair.getDesNode();
-		file_io.filewrite2(OutFileName, "开始grooming");
+		file_io.filewrite2(OutFileName, "开始flow splitting");
 		ArrayList<Link> CannotUseLink=new ArrayList<>();
 		//首先删除所有属性为OP以及保护的链路
 		HashMap<String, Link> linklisttest = MixLayer.getLinklist();
 		Iterator<String> linkitortest = linklisttest.keySet().iterator();
 		while (linkitortest.hasNext()) {
 			Link Mlink = (Link) (linklisttest.get(linkitortest.next()));
+			if(Mlink.getnature_IPorOP()==Constant.NATURE_BOUND) {
+				Mlink.setRestcapacity(Constant.MaxNum);
+				continue;
+			}
 			if(Mlink.getnature_IPorOP()==Constant.NATURE_OP||Mlink.getnature_WorkOrPro()==Constant.NATURE_PRO)
 				CannotUseLink.add(Mlink);
-				System.out.println("flowsplitting 不能使用的链路："+ Mlink.getName());
 		}
 		for(Link delLink: CannotUseLink){
 			MixLayer.removeLink(delLink);
 		}
-		System.out.println("flowsplitting删除了"+CannotUseLink.size()+" 条链路" );
+		//debug
+//		HashMap<String,Node> nodelist=MixLayer.getNodelist();
+//	     Iterator<String> iter1=nodelist.keySet().iterator();
+//	     while(iter1.hasNext()){
+//	    	 Node node_test=(Node)(nodelist.get(iter1.next()));
+//	    	 System.out.println(node_test.getName());
+//	    	 file_io.filewrite2(OutFileName, node_test.getName()+"的邻节点:");
+//	    	 for(Node neinode:node_test.getNeinodelist()){
+//	    		 file_io.filewrite2(OutFileName, neinode.getName());
+//	    	 }
+//	     }	 
+//	 	HashMap<String, Link> linklisttest2 = MixLayer.getLinklist();
+//		Iterator<String> linkitortest2 = linklisttest2.keySet().iterator();
+//		 file_io.filewrite2(OutFileName, "dijkstra之前的链路");
+//		while (linkitortest2.hasNext()) {
+//			Link Mlink = (Link) (linklisttest2.get(linkitortest2.next()));
+//			 file_io.filewrite2(OutFileName, Mlink.getName());
+//		}
+		
 		ArrayList<Link> DelNoFlowLinkToReco = new ArrayList<>();// 每次循环要删除的虚拟链路
 		ArrayList<Link> AllDelNoFlowLinkToReco = new ArrayList<>();// 一共需要删除的虚拟链路
 		while (true) {
@@ -76,8 +97,10 @@ public class FlowSplitting {
 						FlowUseOnLink fuo =new FlowUseOnLink(LinkOnRoute, UnfinishFLow);
 						fuoList.add(fuo);
 						LinkOnRoute.setRestcapacity(LinkOnRoute.getRestcapacity() - UnfinishFLow);
-						for (Link phlink : LinkOnRoute.getPhysicallink()) {// 记录工作走过的虚拟链路对应的物理链路
-							totallink.add(phlink);
+						if(LinkOnRoute.getPhysicallink()!=null){
+							for (Link phlink : LinkOnRoute.getPhysicallink()) {// 记录工作走过的虚拟链路对应的物理链路
+								totallink.add(phlink);
+							}
 						}
 					}
 					UnfinishFLow = 0;
@@ -91,8 +114,11 @@ public class FlowSplitting {
 						FlowUseOnLink fuo =new FlowUseOnLink(LinkOnRoute, UnfinishFLow);
 						fuoList.add(fuo);
 						LinkOnRoute.setRestcapacity(LinkOnRoute.getRestcapacity() - MinFlowOnRoute);
-						for (Link phlink : LinkOnRoute.getPhysicallink()) {// 记录工作走过的虚拟链路对应的物理链路
-							totallink.add(phlink);
+						file_io.filewrite2(OutFileName, "链路"+LinkOnRoute.getName()+"上剩余流量为："+LinkOnRoute.getRestcapacity());
+						if(LinkOnRoute.getPhysicallink()!=null){
+							for (Link phlink : LinkOnRoute.getPhysicallink()) {// 记录工作走过的虚拟链路对应的物理链路
+								totallink.add(phlink);
+							}
 						}
 					}
 					UnfinishFLow = UnfinishFLow - MinFlowOnRoute;
@@ -104,13 +130,13 @@ public class FlowSplitting {
 				Iterator<String> linkitor2 = linklist2.keySet().iterator();
 				while (linkitor2.hasNext()) {
 					Link IPlink = (Link) (linklist2.get(linkitor2.next()));
+					if(IPlink.getnature_IPorOP()==Constant.NATURE_BOUND) continue;
 					if (IPlink.getRestcapacity() == 0) {
 						DelNoFlowLinkToReco.add(IPlink); // 删除流量为0 的虚拟链路
-						file_io.filewrite2(OutFileName, "IP链路：" + IPlink.getName());
+						file_io.filewrite2(OutFileName, "删除剩余流量为0的虚拟链路：" + IPlink.getName());
 					}
 				}
 				for (Link link : DelNoFlowLinkToReco) {
-					file_io.filewrite2(OutFileName, "删除的虚拟层链路为：" + link.getName());
 					MixLayer.removeLink(link); // 这里的IP链路删除如果在最后路由不成功时需要恢复
 					AllDelNoFlowLinkToReco.add(link);
 				}
@@ -128,8 +154,6 @@ public class FlowSplitting {
 		for(Link link:CannotUseLink){//恢复OP以及保护链路
 			MixLayer.addLink(link);
 		}
-
 		return UnfinishFLow;
 	}
-
 }

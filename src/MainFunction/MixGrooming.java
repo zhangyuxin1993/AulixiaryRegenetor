@@ -1,5 +1,6 @@
 package MainFunction;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -18,12 +19,16 @@ import subgraph.LinearRoute;
 public class MixGrooming {
 	String OutFileName = MainOfAulixiaryRegenetor.OutFileName;
 
-	public boolean MixGrooming(NodePair nodepair, Layer MixLayer, double UnfishFlow,ParameterTransfer ptoftransp,ArrayList<Double>RegLengthList,
-			ArrayList<WorkandProtectRoute> wprlist,float threshold,ArrayList<Link> totallink,ArrayList<FlowUseOnLink> fuoList) {
+	public boolean MixGrooming(NodePair nodepair, Layer MixLayer, double UnfishFlow, ParameterTransfer ptoftransp,
+			ArrayList<Double> RegLengthList, ArrayList<WorkandProtectRoute> wprlist, float threshold,
+			ArrayList<Link> totallink, ArrayList<FlowUseOnLink> fuoList) throws IOException {
 		file_out_put file_io = new file_out_put();
 		RouteSearching Dijkstra = new RouteSearching();
-		boolean routeFlag=false;
+		boolean routeFlag = false;
 
+		file_io.filewrite2(OutFileName, "  ");
+		file_io.filewrite2(OutFileName, "开始Mix Grooming");
+		//设置bound链路上容量大小为无穷大
 		// 找到的路由中必须含有虚拟链路
 		// 因为只能选取一条路由 mixgrooming 所以此时要删除容量不够的虚拟链路
 		ArrayList<Link> DelLackCapLink = new ArrayList<>(); // 删除了虚拟链路容量小于未完成容量的链路
@@ -31,7 +36,9 @@ public class MixGrooming {
 		Iterator<String> linkitor2 = linklist.keySet().iterator();
 		while (linkitor2.hasNext()) {
 			Link linkInMixlayer = (Link) (linklist.get(linkitor2.next()));
-			if(linkInMixlayer.getnature_IPorOP()==Constant.NATURE_IP){
+			if (linkInMixlayer.getnature_IPorOP() == Constant.NATURE_BOUND) 	continue;
+
+			if (linkInMixlayer.getnature_IPorOP() == Constant.NATURE_IP) {
 				if (linkInMixlayer.getRestcapacity() < UnfishFlow) {
 					DelLackCapLink.add(linkInMixlayer);
 				}
@@ -40,11 +47,50 @@ public class MixGrooming {
 		for (Link delLink : DelLackCapLink) {
 			MixLayer.removeLink(delLink);
 		}
+		// debug
+		HashMap<String, Link> Linklist = MixLayer.getLinklist();
+		Iterator<String> iter1 = Linklist.keySet().iterator();
+		file_io.filewrite2(OutFileName, "链路条数" + Linklist.size());
+		while (iter1.hasNext()) {
+			Link link = (Link) (Linklist.get(iter1.next()));
+			file_io.filewrite2(OutFileName, "链路" + link.getName() + "  属性 " + link.getnature_IPorOP() + "  "
+					+ link.getnature_WorkOrPro() + "  剩余" + link.getRestcapacity());
+		}
+
+		// debug
+//		HashMap<String, Node> nodelist = MixLayer.getNodelist();
+//		Iterator<String> iter2 = nodelist.keySet().iterator();
+//		while (iter2.hasNext()) {
+//			Node node_test = (Node) (nodelist.get(iter2.next()));
+//			file_io.filewrite2(OutFileName, node_test.getName() + "的邻节点:");
+//			for (Node neinode : node_test.getNeinodelist()) {
+//				file_io.filewrite2(OutFileName, neinode.getName());
+//
+//			}
+//		}
 		ArrayList<LinearRoute> routeList = new ArrayList<>();
 		Dijkstra.Kshortest(nodepair.getSrcNode(), nodepair.getDesNode(), MixLayer, 20, routeList);
 
 		if (routeList.size() != 0 && routeList != null) {// 找到路由
 			for (LinearRoute route : routeList) {
+				file_io.filewrite2(OutFileName, "Mixgrooming路由");
+				
+				int LinkNum=route.getLinklist().size();
+				if(LinkNum<=1) continue;
+				if(LinkNum>=3){
+					boolean OPtoIP = false,IPtoOP=false;
+					for(int n=0;n<LinkNum-1;n++){
+						int qian=route.getLinklist().get(n).getnature_IPorOP();
+						int hou=route.getLinklist().get(n+1).getnature_IPorOP();
+						if(qian-hou==-8)   OPtoIP=true;
+						if(OPtoIP&&(qian-hou==-1))   IPtoOP=true;
+					}
+					if(IPtoOP)//说明存在两端间隔开的物理路由 此时应当舍弃改route 否则会增加transponder的数量
+						continue;
+				}
+				route.OutputRoute_node(route, OutFileName);
+				file_io.filewrite2(OutFileName, "");
+				
 				boolean IPFlag = false;
 				for (Link LinkOnRoute : route.getLinklist()) {
 					if (LinkOnRoute.getnature_IPorOP() == Constant.NATURE_IP) {// 判断该路由链路中是否有虚拟链路
@@ -58,12 +104,11 @@ public class MixGrooming {
 					ArrayList<Link> IPLinkOnRoute = new ArrayList<>();
 					ArrayList<Link> OPLinkOnRoute = new ArrayList<>();
 					for (Link LinkOnRoute : route.getLinklist()) {
-						if (LinkOnRoute.getnature_IPorOP() == Constant.NATURE_IP){
+						if (LinkOnRoute.getnature_IPorOP() == Constant.NATURE_IP) {
 							IPLinkOnRoute.add(LinkOnRoute);
-							for(Link phyLink: LinkOnRoute.getPhysicallink())
+							for (Link phyLink : LinkOnRoute.getPhysicallink())
 								totallink.add(phyLink);
-						}
-						else
+						} else if(LinkOnRoute.getnature_IPorOP()==Constant.NATURE_OP)
 							OPLinkOnRoute.add(LinkOnRoute);
 					}
 					double ResCapMin = 1000;
@@ -76,39 +121,54 @@ public class MixGrooming {
 
 					// IP路由上的剩余容量大于未完成流量 下面要给物理链路分配FS
 					MixGrooming mg = new MixGrooming();
-					routeFlag=mg.AssignFSforPhyLinkAndIPLinkStab(OPLinkOnRoute, UnfishFlow, ptoftransp,MixLayer, wprlist, nodepair, RegLengthList, threshold);
-					
-					if(routeFlag){//说明此时物理链路路由成功 则要改变虚拟链路上的容量
-						for(Link link: OPLinkOnRoute)//路由成功时需要将物理链路对应的路由也加入totallink
+					//debug
+					file_io.filewrite2(OutFileName,"mixgrooming中的物理链路：");
+					for(Link link: OPLinkOnRoute){
+						file_io.filewrite2(OutFileName,link.getName());
+					}
+					routeFlag = mg.AssignFSforPhyLinkAndIPLinkStab(OPLinkOnRoute, UnfishFlow, ptoftransp, MixLayer,
+							wprlist, nodepair, RegLengthList, threshold);
+
+					if (routeFlag) {// 说明此时物理链路路由成功 则要改变虚拟链路上的容量
+						file_io.filewrite2(OutFileName, "MixGrooming路由成功");
+						route.OutputRoute_node(route, OutFileName);
+						for (Link link : OPLinkOnRoute)// 路由成功时需要将物理链路对应的路由也加入totallink
 							totallink.add(link);
-						for(Link ModifyCapLink: IPLinkOnRoute){
-							ModifyCapLink.setRestcapacity(ModifyCapLink.getRestcapacity()-UnfishFlow);
+						for (Link ModifyCapLink : IPLinkOnRoute) {
+							ModifyCapLink.setRestcapacity(ModifyCapLink.getRestcapacity() - UnfishFlow);
 						}
-						break;//找到一条成功的路由就跳出 first-fit
+						break;// 找到一条成功的路由就跳出 first-fit
 					}
 				}
 			}
-		} else {
-			System.out.println("MixGrooming没有找到路由");
 		}
-		for(Link recLink:DelLackCapLink){//恢复开始删去的链路
+		if (!routeFlag){
+			file_io.filewrite2(OutFileName, "MixGrooming没有找到路由");
+			for(FlowUseOnLink fuo:fuoList){//如果mixgrooming不成功 则要把flowsplitting中减去的流量恢复
+				fuo.getVlink().setRestcapacity(fuo.getVlink().getRestcapacity()+fuo.getFlowUseOnLink());
+			}
+		}
+
+		for (Link recLink : DelLackCapLink) {// 恢复开始删去的链路
 			MixLayer.addLink(recLink);
 		}
 		return routeFlag;
- 
+
 	}
 
-	public boolean AssignFSforPhyLinkAndIPLinkStab(ArrayList<Link> OPLinkOnRoute, double UnfishFlow, ParameterTransfer ptoftransp, 
-			Layer MixLayer,ArrayList<WorkandProtectRoute> wprlist,NodePair nodepair,ArrayList<Double>RegLengthList,float threshold) {
+	public boolean AssignFSforPhyLinkAndIPLinkStab(ArrayList<Link> OPLinkOnRoute, double UnfishFlow,
+			ParameterTransfer ptoftransp, Layer MixLayer, ArrayList<WorkandProtectRoute> wprlist, NodePair nodepair,
+			ArrayList<Double> RegLengthList, float threshold) throws IOException {
 		boolean routeFlag = false;
 		file_out_put file_io = new file_out_put();
-		int routelength = 0, slotnum = 0,cost=0;
+		int routelength = 0, slotnum = 0, cost = 0;
+		file_io.filewrite2(OutFileName, "进入物理链路分配FS");
 		double X = 1;
 		for (Link link : OPLinkOnRoute) {
-			routelength = routelength + link.getLength();
-			cost=(int) (cost+link.getCost());
+			routelength = (int) (routelength + link.getLength());
+			cost = (int) (cost + link.getCost());
 		}
-		if (routelength <=4000) {// 找到的路径不需要再生器
+		if (routelength <= 4000) {// 找到的路径不需要再生器
 			double costOftransp = 0;
 			if (routelength > 2000 && routelength <= 4000) {
 				costOftransp = Constant.Cost_IP_reg_BPSK;
@@ -126,8 +186,8 @@ public class MixGrooming {
 			slotnum = (int) Math.ceil(UnfishFlow / X);// 向上取整
 			ptoftransp.setcost_of_tranp(ptoftransp.getcost_of_tranp() + costOftransp * 2);
 			file_io.filewrite2(OutFileName, "");
-			file_io.filewrite2(OutFileName, "Mixgorrming 工作路径不需要再生器  cost of transponder" + costOftransp * 2
-					+ "transponder cost=" + ptoftransp.getcost_of_tranp());
+			file_io.filewrite2(OutFileName, "Mixgrooming 工作路径不需要再生器  cost of transponder" + costOftransp * 2
+					+ "  transponder cost=" + ptoftransp.getcost_of_tranp());
 
 			if (slotnum < Constant.MinSlotinLightpath) {
 				slotnum = Constant.MinSlotinLightpath;
@@ -138,15 +198,15 @@ public class MixGrooming {
 			index_wave = spa.spectrumallocationOneRoute(false, null, OPLinkOnRoute, slotnum);
 
 			if (index_wave.size() == 0) {
-				routeFlag=false;
+				routeFlag = false;
 				file_io.filewrite2(OutFileName, "Mixgrooming 物理路径堵塞 ，无法分配频谱资源");
 			} else {
-				routeFlag=true;
+				routeFlag = true;
 				file_io.filewrite2(OutFileName, "");
 				file_io.filewrite2(OutFileName, "MixGrooming 物理路由路径FS：");
 				file_io.filewrite2(OutFileName, "FS起始值：" + index_wave.get(0) + "  长度" + slotnum);
 
-				int length1 = 0;
+				float length1 = 0;
 				// double cost1 = 0;
 				for (Link link : OPLinkOnRoute) {// 记录物理路由链路上使用的FS
 					length1 = length1 + link.getLength();
@@ -156,48 +216,90 @@ public class MixGrooming {
 				} // 改变物理层上的链路FS分配 以便于下一次新建时分配slot
 
 				// 寻找物理路由的起点和终点
-				Link link0 = OPLinkOnRoute.get(0);
-				Link link1 = OPLinkOnRoute.get(1);
-				Link link3 = OPLinkOnRoute.get(OPLinkOnRoute.size() - 2);
-				Link link4 = OPLinkOnRoute.get(OPLinkOnRoute.size() - 1);
-				String srcnode_name = null;
-				String desnode_name = null;
-				if (link0.getNodeA().equals(link1.getNodeA()) || link0.getNodeA().equals(link1.getNodeB())) {
-					srcnode_name = link0.getNodeB().getName();
-				} else
-					srcnode_name = link0.getNodeA().getName();
-
-				if (link4.getNodeA().equals(link3.getNodeA()) || link4.getNodeA().equals(link3.getNodeB())) {
-					desnode_name = link4.getNodeB().getName();
-				} else
-					desnode_name = link4.getNodeA().getName();
-
-				String name = srcnode_name + desnode_name;
 				int index = ptoftransp.getNumOfLink() + 1;
 				ptoftransp.setNumOfLink(index);
+				String srcnode_name = null;
+				String desnode_name = null;
+				String index_inName = String.valueOf(index);
+				Node helpNode = new Node(null, index, null, MixLayer, 0, 0); // 这里将helpNode设置为中间辅助节点
+
+				if (OPLinkOnRoute.size() == 1) {
+					helpNode.setName(OPLinkOnRoute.get(0).getNodeA().getName() + "(" + index_inName + ")");
+					srcnode_name = OPLinkOnRoute.get(0).getNodeA().getName();
+					desnode_name = OPLinkOnRoute.get(0).getNodeB().getName();
+				} else {
+					Link link0 = OPLinkOnRoute.get(0);
+					Link link1 = OPLinkOnRoute.get(1);
+					Link link3 = OPLinkOnRoute.get(OPLinkOnRoute.size() - 2);
+					Link link4 = OPLinkOnRoute.get(OPLinkOnRoute.size() - 1);
+					if (link0.getNodeA().equals(link1.getNodeA()) || link0.getNodeA().equals(link1.getNodeB())) {
+						srcnode_name = link0.getNodeB().getName();
+						helpNode.setName(srcnode_name + "(" + index_inName + ")");
+					} else {
+						srcnode_name = link0.getNodeA().getName();
+						helpNode.setName(srcnode_name + "(" + index_inName + ")");
+					}
+
+					if (link4.getNodeA().equals(link3.getNodeA()) || link4.getNodeA().equals(link3.getNodeB())) {
+						desnode_name = link4.getNodeB().getName();
+					} else
+						desnode_name = link4.getNodeA().getName();
+				}
+				MixLayer.addNode(helpNode);
 
 				Node srcnode = MixLayer.getNodelist().get(srcnode_name);
 				Node desnode = MixLayer.getNodelist().get(desnode_name);
-
-				Link createlink = new Link(name, index, null, MixLayer, srcnode, desnode, length1, cost);
+				length1 = length1 / 1000;
+				cost = cost / 1000;
+				String name = null;
+				Link createlink=new Link(null, 0, null, null, null, null, 0, 0);
+				if (desnode.getIndex() < helpNode.getIndex()){
+					// 确定添加的虚拟路径的名字
+					name = desnode.getName() +"-"+ helpNode.getName();
+					createlink = new Link(name, index, null, MixLayer, desnode, helpNode, length1, cost);
+				}
+				else{
+					name = helpNode.getName() +"-"+ desnode.getName() ;
+					createlink = new Link(name, index, null, MixLayer,helpNode, desnode,  length1, cost);
+				}
 				createlink.setnature_IPorOP(Constant.NATURE_IP);
 				createlink.setnature_WorkOrPro(Constant.NATURE_WORK);
 				createlink.setFullcapacity(slotnum * X);
 				createlink.setRestcapacity(createlink.getFullcapacity() - UnfishFlow);
 				createlink.setPhysicallink(OPLinkOnRoute);
 				MixLayer.addLink(createlink);
+
+				String boundLink_name = null;
+				Link boundlink=new Link(null, 0, null, null, null, null, 0, 0);
+				if (srcnode.getIndex() < helpNode.getIndex()){
+					// 确定添加的虚拟路径的名字
+					boundLink_name = srcnode.getName() +"-"+ helpNode.getName();
+					boundlink = new Link(boundLink_name, index, null, MixLayer, srcnode, helpNode, 0, 0);
+				}
+				else{
+					boundLink_name = helpNode.getName() +"-"+ srcnode.getName() ;
+					boundlink = new Link(boundLink_name, index, null, MixLayer,helpNode, srcnode, 0, 0);
+				}
+
+				boundlink.setnature_IPorOP(Constant.NATURE_BOUND);
+				boundlink.setnature_WorkOrPro(Constant.NATURE_BOUND);
+				boundlink.setRestcapacity(0);
+				MixLayer.addLink(boundlink);
+
 				ArrayList<Link> IPlinkStaInWork = new ArrayList<>();
 				IPlinkStaInWork.add(createlink);
 				ptoftransp.setIPlinkStaInWork(IPlinkStaInWork);// 保存工作时建立的虚拟链路
-				file_io.filewrite2(OutFileName, "不放置再生器时 新建虚拟链路 " + createlink.getName() + "  index= " + createlink.getIndex());
+				file_io.filewrite2(OutFileName,
+						"不放置再生器时 新建虚拟链路 " + createlink.getName() + "  index= " + createlink.getIndex()+"  剩余容量："+createlink.getRestcapacity());
+				ptoftransp.setNumOfTransponder(ptoftransp.getNumOfTransponder()+2);
 			}
 
-		}
-		else if(routelength>4000){
-			//此时需要放置再生器
-			RegeneratorPlace rp=new RegeneratorPlace();
-			routeFlag = rp.regeneratorplace(UnfishFlow, routelength, true, null, OPLinkOnRoute, MixLayer, wprlist, nodepair, RegLengthList, threshold, ptoftransp);
-			
+		} else if (routelength > 4000) {
+			// 此时需要放置再生器
+			RegeneratorPlace rp = new RegeneratorPlace();
+			routeFlag = rp.regeneratorplace(UnfishFlow, routelength, true, null, OPLinkOnRoute, MixLayer, wprlist,
+					nodepair, RegLengthList, threshold, ptoftransp);
+
 		}
 		return routeFlag;
 	}

@@ -29,6 +29,7 @@ public class WorkRouteStab {
 		Iterator<String> linkitor = linklist.keySet().iterator();
 		while (linkitor.hasNext()) {
 			Link linkInMixlayer = (Link) (linklist.get(linkitor.next()));
+			if(linkInMixlayer.getnature_IPorOP()==Constant.NATURE_BOUND) continue;
 			if (linkInMixlayer.getnature_IPorOP() == Constant.NATURE_IP) {// 链路属性为虚拟IP链路
 				if (linkInMixlayer.getRestcapacity() == 0) {//删除剩余流量为0的虚拟链路（无需恢复）
 					DelNoFlowLink.add(linkInMixlayer);
@@ -57,7 +58,7 @@ public class WorkRouteStab {
 		//当未完成的流量大于0时 此时尝试mix grooming 如果还不行 则选择在光层新建
 		if(UnfishFlow==0) routeFlag=true;
 		if(!routeFlag){
-			file_io.filewrite2(OutFileName,"纯虚拟链路路由结束，剩余流量 "+UnfishFlow );
+			file_io.filewrite2(OutFileName,"纯虚拟链路路由结束，未完成的流量： "+UnfishFlow );
 			//mixGrooming
 			MixGrooming mg=new MixGrooming();
 			routeFlag= mg.MixGrooming(nodepair,MixLayer,UnfishFlow, ptoftransp, RegLengthList, wprlist, threshold,totallink,fuoList);

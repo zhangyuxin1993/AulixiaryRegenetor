@@ -1,6 +1,7 @@
 package network;
 
 import general.CommonObject;
+import general.file_out_put;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -12,6 +13,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.StringTokenizer;
 
+import MainFunction.MainOfAulixiaryRegenetor;
 import demand.TrafficDemand;
 
 import subgraph.Cycle;
@@ -23,10 +25,10 @@ public class Layer extends CommonObject{
 	private HashMap<String, Node> nodelist = null; //list of nodes within the layer
 	private HashMap<String, Link> linklist =null;//list of links within the layer
 	private HashMap<String, NodePair> nodepairlist =null;//list of node pairs within the layer
-	private ArrayList<Cycle> cyclelist = null;//list of cycle on the layer
 	private Layer serverlayer = null; //the server layer of the current layer
 	private Layer clientlayer = null; //the client layer of the current layer
-	private int nature;
+	private ArrayList<Link> ArrLinklist =null;
+	
 	public ArrayList<Topology> getTopolist() {
 		return topolist;
 	}
@@ -70,21 +72,22 @@ public class Layer extends CommonObject{
 	public void setNodepairlist(HashMap<String, NodePair> nodepairlist) {
 		this.nodepairlist = nodepairlist;
 	}
-	public ArrayList<Cycle> getCyclelist() {
-		return cyclelist;
+	public ArrayList<Link> getArrLinklist() {
+		return ArrLinklist;
 	}
-	public void setCyclelist(ArrayList<Cycle> cyclelist) {
-		this.cyclelist = cyclelist;
+	public void setArrLinklist(ArrayList<Link> ArrLinklist) {
+		this.ArrLinklist = ArrLinklist;
 	}
-	public Layer(String name, int index, String comments,
-			Network associateNetwork) {
+	
+	
+	public Layer(String name, int index, String comments,Network associateNetwork) {
 		super(name, index, comments);
 		this.associateNetwork = associateNetwork;
 		this.topolist = new ArrayList<Topology>();
 		this.nodelist = new HashMap<String, Node>(40);
 		this.linklist = new HashMap<String, Link>(100);
 		this.nodepairlist = new HashMap<String, NodePair>(800);
-		this.cyclelist = new ArrayList<Cycle>();
+		this.ArrLinklist=new ArrayList<>();
 	}
 	
 	
@@ -96,7 +99,7 @@ public class Layer extends CommonObject{
 		this.nodelist = new HashMap<String, Node>(40);
 		this.linklist = new HashMap<String, Link>(100);
 		this.nodepairlist = new HashMap<String, NodePair>(800);
-		this.cyclelist = new ArrayList<Cycle>();
+		this.ArrLinklist = new ArrayList<Link>();
 		this.serverlayer = serverlayer;
 		this.clientlayer = clientlayer;
 	}
@@ -141,6 +144,7 @@ public class Layer extends CommonObject{
 	/**
 	 * add link to the layer
 	 */
+	String OutFileName = MainOfAulixiaryRegenetor.OutFileName;
 	public void addLink(Link link){
 		this.linklist.put(link.getName(),link);
 		link.setAssociatedLayer(this);
@@ -153,16 +157,8 @@ public class Layer extends CommonObject{
 	/**
 	 * remove link from the iplayer
 	 */
-	public void removeLink(String linkname){
-		Node nodeA=this.linklist.get(linkname).getNodeA();
-		Node nodeB=this.linklist.get(linkname).getNodeB();
-		nodeA.removeNeiNode(nodeB);
-		nodeB.removeNeiNode(nodeA);
-		this.linklist.get(linkname).setAssociatedLayer(null);
-		this.linklist.remove(linkname);	
-	}
-
 	public void removeLink(Link link){
+		file_out_put file_io = new file_out_put();
 		Link delLink=new Link(null, 0, null, this, null, null, 0, 0);
 		Iterator<String> linkitor = this.linklist.keySet().iterator();
 		while (linkitor.hasNext()) {
@@ -178,6 +174,17 @@ public class Layer extends CommonObject{
 		delLink.setAssociatedLayer(null);
 		this.linklist.remove(delLink.getName());	
 	}
+	
+	public void removeLink(String linkname){
+		Node nodeA=this.linklist.get(linkname).getNodeA();
+		Node nodeB=this.linklist.get(linkname).getNodeB();
+		nodeA.removeNeiNode(nodeB);
+		nodeB.removeNeiNode(nodeA);
+		this.linklist.get(linkname).setAssociatedLayer(null);
+		this.linklist.remove(linkname);	
+	}
+
+
 	
 	/**
 	 * add node pair to the layer
@@ -216,9 +223,9 @@ public class Layer extends CommonObject{
 	/**
 	 * get number of cycles
 	 */
-	public int getCycleNum(){
-		return this.cyclelist.size();
-	}
+//	public int getCycleNum(){
+//		return this.cyclelist.size();
+//	}
 	
 	/**
 	 * read in physical topology from a data file csv file
@@ -383,13 +390,7 @@ public class Layer extends CommonObject{
 	 */
 	public Link findLink(Node nodeA, Node nodeB){
 		String name;
-//		if(nodeA==null){
-//			System.out.println("AAAAAAAAAAA");
-//		}
-//		if(nodeB==null){
-//			System.out.println("BBBBBBBBBBBBBBBBB");
-//		}
-		if(nodeA.getIndex()<nodeB.getIndex())
+		if(nodeA.getIndex()<=nodeB.getIndex())
 			name = nodeA.getName()+"-"+nodeB.getName();
 		else
 			name = nodeB.getName()+"-"+nodeA.getName();
