@@ -96,7 +96,7 @@ public class Link extends CommonObject{
 		return physicallink;
 	}
 	public void setPhysicallink(ArrayList<Link> physicallink) {
-		this.physicallink = physicallink;
+		this.physicallink=physicallink;
 	}
 	public Layer getAssociatedLayer() {
 		return associatedLayer;

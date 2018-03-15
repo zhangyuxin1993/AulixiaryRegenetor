@@ -92,7 +92,7 @@ public class FlowSplitting {
 
 				// 找到该路由上的最小流量后分两种情况讨论
 				if (UnfinishFLow <= MinFlowOnRoute) {// 未完成的业务小于链路上剩余的流量此时可以完成业务
-					file_io.filewrite2(OutFileName, "未完成的业务小于链路上剩余的流量 此时可以完成业务");
+					file_io.filewrite2(OutFileName, "未完成的业务小于链路上剩余的流量 flowSplitting 成功");
 					for (Link LinkOnRoute : newRoute.getLinklist()) {// 改变每段虚拟链路上的剩余流量
 						FlowUseOnLink fuo =new FlowUseOnLink(LinkOnRoute, UnfinishFLow);
 						fuoList.add(fuo);

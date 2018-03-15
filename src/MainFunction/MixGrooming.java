@@ -68,6 +68,7 @@ public class MixGrooming {
 //
 //			}
 //		}
+		ArrayList<Link>psyLinklist = new ArrayList<>();
 		ArrayList<LinearRoute> routeList = new ArrayList<>();
 		Dijkstra.Kshortest(nodepair.getSrcNode(), nodepair.getDesNode(), MixLayer, 20, routeList);
 
@@ -84,9 +85,10 @@ public class MixGrooming {
 						break;
 					}
 				}
+				
 				if (IPFlag) {// 只有当路由中含有IP链路时才会进行分配
 					// 寻找路由上所有的IP链路中流量最小的业务
-					totallink.clear();
+					psyLinklist.clear();
 					ArrayList<Link> IPLinkOnRoute = new ArrayList<>();
 					ArrayList<Link> OPLinkOnRoute = new ArrayList<>();
 					int n=0;
@@ -97,7 +99,7 @@ public class MixGrooming {
 						if (LinkOnRoute.getnature_IPorOP() == Constant.NATURE_IP) {
 							IPLinkOnRoute.add(LinkOnRoute);
 							for (Link phyLink : LinkOnRoute.getPhysicallink())
-								totallink.add(phyLink);
+								psyLinklist.add(phyLink);
 						} else if(LinkOnRoute.getnature_IPorOP()==Constant.NATURE_OP)
 							OPLinkOnRoute.add(LinkOnRoute);
 					}
@@ -119,16 +121,18 @@ public class MixGrooming {
 						continue;
 
 					// IP路由上的剩余容量大于未完成流量 下面要给物理链路分配FS
-					MixGrooming mg = new MixGrooming();
 					//debug
 					file_io.filewrite2(OutFileName,"mixgrooming中的物理链路：");
 					for(Link link: OPLinkOnRoute){
 						file_io.filewrite2(OutFileName,link.getName());
 					}
+					
+					MixGrooming mg = new MixGrooming();
 					routeFlag = mg.AssignFSforPhyLinkAndIPLinkStab(OPLinkOnRoute, UnfishFlow, ptoftransp, MixLayer,
 							wprlist, nodepair, RegLengthList, threshold);
 
 					if (routeFlag) {// 说明此时物理链路路由成功 则要改变虚拟链路上的容量
+						totallink.addAll(psyLinklist);
 						file_io.filewrite2(OutFileName, "MixGrooming路由成功");
 						route.OutputRoute_node(route, OutFileName);
 						for (Link link : OPLinkOnRoute)// 路由成功时需要将物理链路对应的路由也加入totallink
@@ -143,6 +147,7 @@ public class MixGrooming {
 		}
 		if (!routeFlag){
 			file_io.filewrite2(OutFileName, "MixGrooming没有找到路由");
+			totallink.clear();
 			for(FlowUseOnLink fuo:fuoList){//如果mixgrooming不成功 则要把flowsplitting中减去的流量恢复
 				fuo.getVlink().setRestcapacity(fuo.getVlink().getRestcapacity()+fuo.getFlowUseOnLink());
 			}

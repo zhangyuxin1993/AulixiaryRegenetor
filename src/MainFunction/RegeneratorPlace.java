@@ -595,7 +595,11 @@ public class RegeneratorPlace {
 					link.setMaxslot(slotnum + link.getMaxslot());
 					phyLinklist.add(link);// 记录建立的虚拟链路对应的物理链路
 				}
-
+				//debug
+				file_io.filewrite2(OutFileName, "debug");
+				for(Link link : phyLinklist){
+					file_io.filewrite2(OutFileName, "链路"+link.getName());
+				}
 				if (IPorOEO) {// true的时候表示放置的是IP再生器 需要在IP层建立链路
 					// 改变起始节点 剩余容量
 					// 首先寻找需要构建IP链路的起始节点和终止节点
@@ -659,8 +663,15 @@ public class RegeneratorPlace {
 					createlink.setnature_WorkOrPro(Constant.NATURE_WORK);
 					createlink.setPhysicallink(phyLinklist);
 					createlink.setRestcapacity(minflow);
-					phyLinklist.clear();
 					MixLayer.addLink(createlink);
+//					phyLinklist.clear();
+					//debug
+					file_io.filewrite2(OutFileName, "放置再生器时建立虚拟路径");
+					file_io.filewrite2(OutFileName, "建立虚拟路径"+ createlink.getName());
+					file_io.filewrite2(OutFileName, "对应的物理链路");
+					for(Link link : createlink.getPhysicallink()){
+						file_io.filewrite_without(OutFileName, link.getName());
+					}
 
 					String boundLink_name = null;
 					Link boundlink = new Link(null, 0, null, null, null, null, 0, 0);

@@ -19,8 +19,8 @@ import subgraph.LinearRoute;
 public class PurePhyWorkRouteSta {
 	String OutFileName = MainOfAulixiaryRegenetor.OutFileName;
 
-	public boolean purephyworkroutesta(NodePair nodepair, Layer MixLayer,ArrayList<WorkandProtectRoute> wprlist, float threshold,
-			ParameterTransfer ptoftransp,ArrayList<Double> RegLengthList) throws IOException {
+	public LinearRoute purephyworkroutesta(NodePair nodepair, Layer MixLayer,ArrayList<WorkandProtectRoute> wprlist, float threshold,
+			ParameterTransfer ptoftransp,ArrayList<Double> RegLengthList,ArrayList<Link> totallink) throws IOException {
 		RouteSearching Dijkstra = new RouteSearching();
 		boolean opworkflag = false;
 		Node srcnode = nodepair.getSrcNode();
@@ -127,8 +127,6 @@ public class PurePhyWorkRouteSta {
 							link.setMaxslot(slotnum + link.getMaxslot());
 						} // 改变物理层上的链路容量 以便于下一次新建时分配slot
 
-				
-						
 						Node helpNode=new Node(null, index, null, MixLayer, 0, 0); // 这里将helpNode设置为中间辅助节点
 						helpNode.setName(srcnode.getName()+"("+index_inName+")");
 						MixLayer.addNode(helpNode);
@@ -180,26 +178,19 @@ public class PurePhyWorkRouteSta {
 				}
 			}
 			
-			if (opworkflag) {
-				file_io.filewrite2(OutFileName, "工作路径纯物理路径路由成功并且RSA");
-				WorkandProtectRoute wpr = new WorkandProtectRoute(nodepair);
-				Request re = new Request(nodepair);
-				ArrayList<Link> totallink = new ArrayList<>();
-				totallink = opnewRoute.getLinklist();
-				wpr.setrequest(re);
-				wpr.setworklinklist(totallink);
-				wpr.setRegWorkLengthList(RegLengthList);
-				wprlist.add(wpr);
+			if (opworkflag) 
 				break;
-
-			}
-			if (!opworkflag) {
-				file_io.filewrite2(OutFileName, "工作路径纯物理链路路由失败");
-			}
+		}
+		if (opworkflag) {
+			file_io.filewrite2(OutFileName, "工作路径纯物理路径路由成功并且RSA");
+			
+		}
+		if (!opworkflag) {
+			file_io.filewrite2(OutFileName, "工作路径纯物理链路路由失败");
 		}
 		for(Link link:DelAllIPLink){//恢复所有的虚拟链路
 			MixLayer.addLink(link);
 		}
-		return opworkflag;
+		return opnewRoute;
 	}
 }

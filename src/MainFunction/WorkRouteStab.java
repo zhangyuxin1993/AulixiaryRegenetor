@@ -11,6 +11,7 @@ import general.file_out_put;
 import network.Layer;
 import network.Link;
 import network.NodePair;
+import subgraph.LinearRoute;
 
 public class WorkRouteStab {
 	String OutFileName =MainOfAulixiaryRegenetor.OutFileName;
@@ -54,7 +55,6 @@ public class WorkRouteStab {
 		ArrayList<FlowUseOnLink> fuoList=new ArrayList<>();
 		ArrayList<Link> totallink=new ArrayList<>();
 		double UnfishFlow=fsl.flowsplitting(MixLayer, nodepair, totallink,fuoList);
-		
 		//当未完成的流量大于0时 此时尝试mix grooming 如果还不行 则选择在光层新建
 		if(UnfishFlow==0) routeFlag=true;
 		if(!routeFlag){
@@ -63,20 +63,32 @@ public class WorkRouteStab {
 			//mixGrooming
 			MixGrooming mg=new MixGrooming();
 			routeFlag= mg.MixGrooming(nodepair,MixLayer,UnfishFlow, ptoftransp, RegLengthList, wprlist, threshold,totallink,fuoList);
-			
-			if(routeFlag){
-				WorkandProtectRoute wpr=new WorkandProtectRoute(nodepair);
-				Request re=new Request(nodepair);
-				wpr.setrequest(re);
-				wpr.setworklinklist(totallink);
-				wprlist.add(wpr);
-				wpr.setRegWorkLengthList(RegLengthList);//这里需要权衡
-				file_io.filewrite2(OutFileName,"工作路径路由成功");
-			}
 			if(!routeFlag){//Mixgrooming 不成功 此时在光层建立物理链路
 				PurePhyWorkRouteSta rpwrs=new PurePhyWorkRouteSta();
-				routeFlag=rpwrs.purephyworkroutesta(nodepair, MixLayer, wprlist, threshold, ptoftransp, RegLengthList);
+				LinearRoute newRoute=new LinearRoute(null, 0, null);
+				newRoute=rpwrs.purephyworkroutesta(nodepair, MixLayer, wprlist, threshold, ptoftransp, RegLengthList,totallink);
+				if(newRoute.getNodelist().size()!=0&&newRoute!=null){
+					totallink=newRoute.getLinklist();
+					routeFlag=true;
+				}
 			}
+		}
+		ArrayList<Link> FinalLinklist=new ArrayList<>();
+		if(totallink!=null&&totallink.size()!=0){
+			for(Link link: totallink){
+				if(!FinalLinklist.contains(link))
+						FinalLinklist.add(link);
+			}
+		}
+		
+		if(routeFlag){
+			WorkandProtectRoute wpr=new WorkandProtectRoute(nodepair);
+			Request re=new Request(nodepair);
+			wpr.setrequest(re);
+			wpr.setworklinklist(FinalLinklist);
+			wprlist.add(wpr);
+			wpr.setRegWorkLengthList(RegLengthList);//这里需要权衡
+			file_io.filewrite2(OutFileName,"工作路径路由成功");
 		}
 	for(Link recoLink:DelProLink){//恢复前面删除的属性为保护的链路
 		MixLayer.addLink(recoLink);
