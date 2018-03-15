@@ -20,6 +20,14 @@ public class ParameterTransfer {
 	double cost_of_tranp=0;
 	int NumOfLink=0;
 	ArrayList<Link> IPlinkStaInWork=new ArrayList<>();
+	int OEOregLink=0;
+	
+	public int getOEOregLink() {
+		return OEOregLink;
+	}
+	public void setOEOregLink(int  OEOregLink) {
+		 this.OEOregLink=OEOregLink;
+	}
 	
 	public int getNumOfLink() {
 		return NumOfLink;

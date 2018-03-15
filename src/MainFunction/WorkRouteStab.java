@@ -58,6 +58,7 @@ public class WorkRouteStab {
 		//当未完成的流量大于0时 此时尝试mix grooming 如果还不行 则选择在光层新建
 		if(UnfishFlow==0) routeFlag=true;
 		if(!routeFlag){
+			ptoftransp.setNumOfTransponder(ptoftransp.getNumOfTransponder()+2);
 			file_io.filewrite2(OutFileName,"纯虚拟链路路由结束，未完成的流量： "+UnfishFlow );
 			//mixGrooming
 			MixGrooming mg=new MixGrooming();

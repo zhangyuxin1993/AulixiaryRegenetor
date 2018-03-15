@@ -18,7 +18,7 @@ public class MainOfAulixiaryRegenetor {
 	public static String OutFileName = "D:\\zyx\\programFile\\RegwithProandTrgro\\6.dat";
 
 	public static void main(String[] args) throws IOException {
-		String TopologyName = "D:/zyx/Topology/cost239.csv";
+		String TopologyName = "D:/zyx/Topology/6.csv";
 		// String TopologyName = "F:/zyx/Topology/cost239.csv";
 		int DemandNum = 15;
 		ParameterTransfer pt = new ParameterTransfer();
@@ -103,9 +103,23 @@ public class MainOfAulixiaryRegenetor {
 						mm.mainMethod(smallnodepair, MixLayer, pt, threshold,wprlist);
 					}
 				}
+				// 输出结果
+				file_io.filewrite2(FinalResultFile, "业务个数：" + wprlist.size());
+//				if(wprlist.size()!=DemandNum) {
+//					file_io.filewrite2(FinalResultFile, "此次shuffle无法完成所有业务" );
+//					continue;
+//				}
+				
+				for(WorkandProtectRoute wpr:wprlist){
+					file_io.filewrite2(FinalResultFile,"nodepair："+wpr.getdemand().getName());
+					file_io.filewrite2(FinalResultFile,"工作路径对应的物理链路：");
+					for(Link link:wpr.getworklinklist()){
+						file_io.filewrite2(FinalResultFile,link.getName());
+					}
 			}
 		}
-		// 输出结果
+			
+		}
 		System.out.println("Finish");
 	}
 
@@ -132,7 +146,7 @@ public class MainOfAulixiaryRegenetor {
 	     while(iter1.hasNext()){
 	    	 Link link=(Link)(Linklist.get(iter1.next()));
 	    	 file_io.filewrite2(OutFileName,"链路"+link.getName()+ "  属性 "+ link.getnature_IPorOP()+ "  "+ link.getnature_WorkOrPro()
-	    	 +"  剩余"+ link.getRestcapacity());
+	    	 +"  剩余"+ link.getRestcapacity()+"   长度"+ link.getLength()+"  cost:"+link.getCost());
 	     }
 	     
 	     

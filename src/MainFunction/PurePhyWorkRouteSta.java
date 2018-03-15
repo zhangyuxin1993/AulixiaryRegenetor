@@ -115,7 +115,7 @@ public class PurePhyWorkRouteSta {
 						file_io.filewrite2(OutFileName, "工作链路不需要再生器时在光层分配频谱：");
 						file_io.filewrite2(OutFileName, "FS起始值：" + index_wave.get(0) + "  长度" + slotnum);
 						opworkflag = true;
-						float length1 = 0;
+						double length1 = 0;
 						double cost = 0;
 
 						for (Link link : opnewRoute.getLinklist()) {// 物理层的link
@@ -181,7 +181,6 @@ public class PurePhyWorkRouteSta {
 			}
 			
 			if (opworkflag) {
-				ptoftransp.setNumOfTransponder(ptoftransp.getNumOfTransponder()+2);//工作光路建立成功
 				file_io.filewrite2(OutFileName, "工作路径纯物理路径路由成功并且RSA");
 				WorkandProtectRoute wpr = new WorkandProtectRoute(nodepair);
 				Request re = new Request(nodepair);

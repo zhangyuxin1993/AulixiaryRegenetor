@@ -74,20 +74,6 @@ public class MixGrooming {
 		if (routeList.size() != 0 && routeList != null) {// 找到路由
 			for (LinearRoute route : routeList) {
 				file_io.filewrite2(OutFileName, "Mixgrooming路由");
-				
-				int LinkNum=route.getLinklist().size();
-				if(LinkNum<=1) continue;
-				if(LinkNum>=3){
-					boolean OPtoIP = false,IPtoOP=false;
-					for(int n=0;n<LinkNum-1;n++){
-						int qian=route.getLinklist().get(n).getnature_IPorOP();
-						int hou=route.getLinklist().get(n+1).getnature_IPorOP();
-						if(qian-hou==-8)   OPtoIP=true;
-						if(OPtoIP&&(qian-hou==-1))   IPtoOP=true;
-					}
-					if(IPtoOP)//说明存在两端间隔开的物理路由 此时应当舍弃改route 否则会增加transponder的数量
-						continue;
-				}
 				route.OutputRoute_node(route, OutFileName);
 				file_io.filewrite2(OutFileName, "");
 				
@@ -103,7 +89,11 @@ public class MixGrooming {
 					totallink.clear();
 					ArrayList<Link> IPLinkOnRoute = new ArrayList<>();
 					ArrayList<Link> OPLinkOnRoute = new ArrayList<>();
+					int n=0;
+					boolean conFlag=false;
 					for (Link LinkOnRoute : route.getLinklist()) {
+						LinkOnRoute.setindexInRoute(n);
+						n++;
 						if (LinkOnRoute.getnature_IPorOP() == Constant.NATURE_IP) {
 							IPLinkOnRoute.add(LinkOnRoute);
 							for (Link phyLink : LinkOnRoute.getPhysicallink())
@@ -111,6 +101,15 @@ public class MixGrooming {
 						} else if(LinkOnRoute.getnature_IPorOP()==Constant.NATURE_OP)
 							OPLinkOnRoute.add(LinkOnRoute);
 					}
+					for(int m=0;m<OPLinkOnRoute.size()-1;m++){
+						Link link0=OPLinkOnRoute.get(m);
+						Link link1=OPLinkOnRoute.get(m+1);
+						if(Math.abs(link0.getindexInRoute()-link1.getindexInRoute())!=1){
+							conFlag=true;
+							break;
+						}
+					}
+					if(conFlag) continue;
 					double ResCapMin = 1000;
 					for (Link link : IPLinkOnRoute) {
 						if (link.getRestcapacity() < ResCapMin)
@@ -161,12 +160,11 @@ public class MixGrooming {
 			ArrayList<Double> RegLengthList, float threshold) throws IOException {
 		boolean routeFlag = false;
 		file_out_put file_io = new file_out_put();
-		int routelength = 0, slotnum = 0, cost = 0;
+		int routelength = 0, slotnum = 0;
 		file_io.filewrite2(OutFileName, "进入物理链路分配FS");
 		double X = 1;
 		for (Link link : OPLinkOnRoute) {
 			routelength = (int) (routelength + link.getLength());
-			cost = (int) (cost + link.getCost());
 		}
 		if (routelength <= 4000) {// 找到的路径不需要再生器
 			double costOftransp = 0;
@@ -206,10 +204,11 @@ public class MixGrooming {
 				file_io.filewrite2(OutFileName, "MixGrooming 物理路由路径FS：");
 				file_io.filewrite2(OutFileName, "FS起始值：" + index_wave.get(0) + "  长度" + slotnum);
 
-				float length1 = 0;
-				// double cost1 = 0;
+				double length1 = 0;
+				double cost1 = 0;
 				for (Link link : OPLinkOnRoute) {// 记录物理路由链路上使用的FS
 					length1 = length1 + link.getLength();
+					cost1=cost1+link.getCost();
 					Request request = null;
 					ResourceOnLink ro = new ResourceOnLink(request, link, index_wave.get(0), slotnum);
 					link.setMaxslot(slotnum + link.getMaxslot());
@@ -250,17 +249,17 @@ public class MixGrooming {
 				Node srcnode = MixLayer.getNodelist().get(srcnode_name);
 				Node desnode = MixLayer.getNodelist().get(desnode_name);
 				length1 = length1 / 1000;
-				cost = cost / 1000;
+				cost1 = cost1 / 1000;
 				String name = null;
 				Link createlink=new Link(null, 0, null, null, null, null, 0, 0);
 				if (desnode.getIndex() < helpNode.getIndex()){
 					// 确定添加的虚拟路径的名字
 					name = desnode.getName() +"-"+ helpNode.getName();
-					createlink = new Link(name, index, null, MixLayer, desnode, helpNode, length1, cost);
+					createlink = new Link(name, index, null, MixLayer, desnode, helpNode, length1, cost1);
 				}
 				else{
 					name = helpNode.getName() +"-"+ desnode.getName() ;
-					createlink = new Link(name, index, null, MixLayer,helpNode, desnode,  length1, cost);
+					createlink = new Link(name, index, null, MixLayer,helpNode, desnode,  length1, cost1);
 				}
 				createlink.setnature_IPorOP(Constant.NATURE_IP);
 				createlink.setnature_WorkOrPro(Constant.NATURE_WORK);
@@ -291,7 +290,6 @@ public class MixGrooming {
 				ptoftransp.setIPlinkStaInWork(IPlinkStaInWork);// 保存工作时建立的虚拟链路
 				file_io.filewrite2(OutFileName,
 						"不放置再生器时 新建虚拟链路 " + createlink.getName() + "  index= " + createlink.getIndex()+"  剩余容量："+createlink.getRestcapacity());
-				ptoftransp.setNumOfTransponder(ptoftransp.getNumOfTransponder()+2);
 			}
 
 		} else if (routelength > 4000) {

@@ -79,8 +79,6 @@ public class RegeneratorPlace {
 						} else {
 							link_loop = newRoute.getLinklist().get(n);
 						}
-						// file_io.filewrite2(OutFileName, "n="+n+" size="+
-						// size);
 						if (link_loop.getnature_IPorOP() == Constant.NATURE_BOUND)
 							continue;
 						file_io.filewrite2(OutFileName, link_loop.getName());
@@ -122,7 +120,6 @@ public class RegeneratorPlace {
 
 						for (int k = 0; k < set.length; k++) {
 							setarray.add(set[k]);
-							file_io.filewrite2(OutFileName, "k=" + k + " re size=" + RemainRatio.size());
 							if (RemainRatio.get(k) >= threshold || RemainRatio.get(k + 1) >= threshold) {// 只要再生器前面或者后面有一段未充分使用则放置IP再生器
 								IPRegarray.add(set[k]);// 存储IP再生器放置节点
 							}
@@ -296,7 +293,6 @@ public class RegeneratorPlace {
 		}
 
 		if (success) {
-			ptOftransp.setNumOfTransponder(ptOftransp.getNumOfTransponder()+2);
 			// System.out.print("再生器放置成功并且RSA,放置的再生器个数为" +
 			// finalRoute.getregnum() + " 位置为：");
 			file_io.filewrite_without(OutFileName, "再生器放置成功并且RSA,放置的再生器个数为" + finalRoute.getregnum() + "  位置为：");
@@ -419,7 +415,7 @@ public class RegeneratorPlace {
 		ParameterTransfer pt = new ParameterTransfer();
 		RegeneratorPlace rp = new RegeneratorPlace();
 		int count = 0;
-		double length2 = 0;
+		double length2 = 0,OEOLength=0;
 		boolean regflag2 = false;
 		ArrayList<Link> linklist2 = new ArrayList<>();
 		file_out_put file_io = new file_out_put();
@@ -460,11 +456,6 @@ public class RegeneratorPlace {
 				}
 			}
 			pt.setStartNode(nodelistInLinkRoute.get(0));
-			// for(Node node:nodelistInLinkRoute){
-			// file_io.filewrite(OutFileName, "linklist上的节点"+node.getName()+"
-			// ");
-			// }
-
 		}
 
 		pt.setMinRemainFlowRSA(10000);// 首先初始化
@@ -487,6 +478,7 @@ public class RegeneratorPlace {
 				}
 				file_io.filewrite2(OutFileName, "工作链路RSA：" + link_loop.getName());
 				length2 = length2 + link_loop.getLength();
+				OEOLength=OEOLength+link_loop.getLength();
 				linklist2.add(link_loop);
 				count = count + 1;
 				if (!regflag2) {// 未到达最后一段路径的RSA
@@ -495,7 +487,7 @@ public class RegeneratorPlace {
 							pt.setEndNode(finalRoute.getRoute().getNodelist().get(count));// 设置终止节点
 						else
 							pt.setEndNode(nodelistInLinkRoute.get(count));// 设置终止节点
-						if (count == 1) {// 此时为transponder的发出链路
+						if (count == finalRoute.getregnode().get(0)) {// 此时为transponder的发出链路
 							double costOfStart = rp.transpCostCal(length2);
 							ptOftransp.setcost_of_tranp(ptOftransp.getcost_of_tranp() + costOfStart);
 							file_io.filewrite2(OutFileName, "transponder起点cost" + costOfStart + "   此时transponder cost="
@@ -505,17 +497,18 @@ public class RegeneratorPlace {
 						if (finalRoute.getIPRegnode().contains(count)) {
 							// 这里用count计算transponder的cost
 							modifylinkcapacity(true, IPflow, length2, linklist2, MixLayer, ptOftransp, ResFlowOnlinks,
-									phyLinklist, pt);
+									phyLinklist, pt,OEOLength);
 							file_io.filewrite2(OutFileName, "本次RSA长度为：" + length2);
 							RegLengthList.add(length2);
 							length2 = 0;
+							OEOLength=0;
 							linklist2.clear();
 							break;
 						}
 						// 该点放置纯OEO再生器
 						else {
 							modifylinkcapacity(false, IPflow, length2, linklist2, MixLayer, ptOftransp, ResFlowOnlinks,
-									phyLinklist, pt);
+									phyLinklist, pt,OEOLength);
 							RegLengthList.add(length2);
 							file_io.filewrite2(OutFileName, "本次RSA长度为：" + length2);
 							length2 = 0;
@@ -535,8 +528,9 @@ public class RegeneratorPlace {
 					else
 						pt.setEndNode(nodelistInLinkRoute.get(count));// 设置终止节点
 					modifylinkcapacity(true, IPflow, length2, linklist2, MixLayer, ptOftransp, ResFlowOnlinks,
-							phyLinklist, pt);// 此时在n点放置再生器
+							phyLinklist, pt,OEOLength);// 此时在n点放置再生器
 					RegLengthList.add(length2);
+					OEOLength=0;
 					file_io.filewrite2(OutFileName, "本次RSA长度为：" + length2);
 					linklist2.clear();
 				}
@@ -546,7 +540,7 @@ public class RegeneratorPlace {
 
 	public boolean modifylinkcapacity(Boolean IPorOEO, double IPflow, double routelength, ArrayList<Link> linklist,
 			Layer MixLayer, ParameterTransfer ptoftransp, ArrayList<Double> ResFlowOnlinks, ArrayList<Link> phyLinklist,
-			ParameterTransfer pt) {// true表示IP再生器
+			ParameterTransfer pt,double OEOLength) {// true表示IP再生器
 		// false表示纯OEO再生器
 		double X = 1;
 		int slotnum = 0;
@@ -588,14 +582,14 @@ public class RegeneratorPlace {
 				file_io.filewrite2(OutFileName, "路径堵塞 ，不分配频谱资源");
 			} else {
 				opworkflag = true;
-				float length1 = 0;
+				double length1 = 0;
 				double cost = 0;
 				file_io.filewrite_without(OutFileName, "光层分配频谱：");
 				file_io.filewrite2(OutFileName, "FS起始值：" + index_wave.get(0) + "  长度" + slotnum);
 				// 物理层的link 改变物理层link上面剩余的FS数
 				for (Link link : linklist) {
-					length1 = length1 + link.getLength();
-					cost = cost + link.getCost();
+//					length1 = length1 + link.getLength();
+//					cost = cost + link.getCost();
 					Request request = null;
 					ResourceOnLink ro = new ResourceOnLink(request, link, index_wave.get(0), slotnum);
 					link.setMaxslot(slotnum + link.getMaxslot());
@@ -648,8 +642,8 @@ public class RegeneratorPlace {
 					helpNode.setName(srcnode.getName() + "(" + index_inName + ")");
 					MixLayer.addNode(helpNode);
 
-					length1 = length1 / 1000;
-					cost = cost / 1000;
+					length1 = OEOLength / 1000;
+					cost = OEOLength / 1000;
 					String name = null;
 					Link createlink = new Link(null, 0, null, null, null, null, 0, 0);
 					if (desnode.getIndex() < helpNode.getIndex()) {
