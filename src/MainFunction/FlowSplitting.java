@@ -18,50 +18,35 @@ import subgraph.LinearRoute;
 public class FlowSplitting {
 	String OutFileName = MainOfAulixiaryRegenetor.OutFileName;
 
-	public double flowsplitting(Layer MixLayer, NodePair nodepair,ArrayList<Link> totallink,ArrayList<FlowUseOnLink> fuoList) throws IOException {
+	public double flowsplitting(Boolean ProFlag,Layer MixLayer, NodePair nodepair,ArrayList<Link> totallink,ArrayList<FlowUseOnLink> fuoList,ArrayList<Link> ProVlinklist) throws IOException {
 		//本方法中将节点对之间的业务尽可能的分流在虚拟路径上面
 //		删除的虚拟链路已经全部恢复 但是没有恢复用掉的流量
 		RouteSearching Dijkstra = new RouteSearching();
 		file_out_put file_io = new file_out_put();
-
+		ProVlinklist.clear();
 		double UnfinishFLow = nodepair.getTrafficdemand();
 		Node srcnode = nodepair.getSrcNode();
 		Node desnode = nodepair.getDesNode();
 		file_io.filewrite2(OutFileName, "开始flow splitting");
 		ArrayList<Link> CannotUseLink=new ArrayList<>();
-		//首先删除所有属性为OP以及保护的链路
-		HashMap<String, Link> linklisttest = MixLayer.getLinklist();
-		Iterator<String> linkitortest = linklisttest.keySet().iterator();
-		while (linkitortest.hasNext()) {
-			Link Mlink = (Link) (linklisttest.get(linkitortest.next()));
-			if(Mlink.getnature_IPorOP()==Constant.NATURE_BOUND) {
-				Mlink.setRestcapacity(Constant.MaxNum);
-				continue;
+		
+		if(!ProFlag){
+			//首先删除所有属性为OP以及保护的链路
+			HashMap<String, Link> linklisttest = MixLayer.getLinklist();
+			Iterator<String> linkitortest = linklisttest.keySet().iterator();
+			while (linkitortest.hasNext()) {
+				Link Mlink = (Link) (linklisttest.get(linkitortest.next()));
+				if(Mlink.getnature_IPorOP()==Constant.NATURE_BOUND) {
+					Mlink.setRestcapacity(Constant.MaxNum);
+					continue;
+				}
+				if(Mlink.getnature_IPorOP()==Constant.NATURE_OP||Mlink.getnature_WorkOrPro()==Constant.NATURE_PRO)
+					CannotUseLink.add(Mlink);
 			}
-			if(Mlink.getnature_IPorOP()==Constant.NATURE_OP||Mlink.getnature_WorkOrPro()==Constant.NATURE_PRO)
-				CannotUseLink.add(Mlink);
+			for(Link delLink: CannotUseLink){
+				MixLayer.removeLink(delLink);
+			}
 		}
-		for(Link delLink: CannotUseLink){
-			MixLayer.removeLink(delLink);
-		}
-		//debug
-//		HashMap<String,Node> nodelist=MixLayer.getNodelist();
-//	     Iterator<String> iter1=nodelist.keySet().iterator();
-//	     while(iter1.hasNext()){
-//	    	 Node node_test=(Node)(nodelist.get(iter1.next()));
-//	    	 System.out.println(node_test.getName());
-//	    	 file_io.filewrite2(OutFileName, node_test.getName()+"的邻节点:");
-//	    	 for(Node neinode:node_test.getNeinodelist()){
-//	    		 file_io.filewrite2(OutFileName, neinode.getName());
-//	    	 }
-//	     }	 
-//	 	HashMap<String, Link> linklisttest2 = MixLayer.getLinklist();
-//		Iterator<String> linkitortest2 = linklisttest2.keySet().iterator();
-//		 file_io.filewrite2(OutFileName, "dijkstra之前的链路");
-//		while (linkitortest2.hasNext()) {
-//			Link Mlink = (Link) (linklisttest2.get(linkitortest2.next()));
-//			 file_io.filewrite2(OutFileName, Mlink.getName());
-//		}
 		
 		ArrayList<Link> DelNoFlowLinkToReco = new ArrayList<>();// 每次循环要删除的虚拟链路
 		ArrayList<Link> AllDelNoFlowLinkToReco = new ArrayList<>();// 一共需要删除的虚拟链路
@@ -77,7 +62,7 @@ public class FlowSplitting {
 			} else {
 				file_io.filewrite2(OutFileName, " ");
 				DelNoFlowLinkToReco.clear();
-
+				ProVlinklist.addAll(newRoute.getLinklist());
 				// 首先查找路由上所有虚拟链路的最小剩余流量
 				file_io.filewrite2(OutFileName, "循环中：找到虚拟链路路由");
 				newRoute.OutputRoute_node(newRoute, OutFileName);
@@ -151,8 +136,10 @@ public class FlowSplitting {
 			}
 			AllDelNoFlowLinkToReco.clear();
 		}
-		for(Link link:CannotUseLink){//恢复OP以及保护链路
-			MixLayer.addLink(link);
+		if(!ProFlag){
+			for(Link link:CannotUseLink){//恢复OP以及保护链路
+				MixLayer.addLink(link);
+			}
 		}
 		return UnfinishFLow;
 	}

@@ -90,13 +90,13 @@ public class Link extends CommonObject{
 	private int wavenum=0; //链路所承载的波长数，用于计算该链路所需的光纤数
 	private ArrayList<Slot> slotsarray;	
 	private ArrayList<Integer> slotsindex;
-	private ArrayList<Link> physicallink;//在物理层所经过的link
+	private ArrayList<Link> physicallink=new ArrayList<>();//在物理层所经过的link
 	
 	public ArrayList<Link> getPhysicallink() {
 		return physicallink;
 	}
 	public void setPhysicallink(ArrayList<Link> physicallink) {
-		this.physicallink=physicallink;
+		this.physicallink.addAll(physicallink);
 	}
 	public Layer getAssociatedLayer() {
 		return associatedLayer;

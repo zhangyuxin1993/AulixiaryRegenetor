@@ -18,7 +18,7 @@ public class MainOfAulixiaryRegenetor {
 	public static String OutFileName = "D:\\zyx\\programFile\\RegwithProandTrgro\\6.dat";
 
 	public static void main(String[] args) throws IOException {
-		String TopologyName = "D:/zyx/Topology/cost239.csv";
+		String TopologyName = "D:/zyx/Topology/6.csv";
 		// String TopologyName = "F:/zyx/Topology/cost239.csv";
 		int DemandNum = 15;
 		ParameterTransfer pt = new ParameterTransfer();
@@ -35,8 +35,8 @@ public class MainOfAulixiaryRegenetor {
 		dr.TrafficNumRadom(RadomNodepairlist); // 随机产生节点对业务
 
 		// 以下可以读取表格中的业务
-		// ReadDemand rd=new ReadDemand();
-		// RadomNodepairlist=rd.readDemand(MixLayer_base,"D:\\6traffic.csv");
+//		 ReadDemand rd=new ReadDemand();
+//		 RadomNodepairlist=rd.readDemand(MixLayer_base,"D:\\6traffic.csv");
 
 		/*
 		 * 设置threshold循环
@@ -110,10 +110,11 @@ public class MainOfAulixiaryRegenetor {
 				// 输出结果
 				int demandnum = 0, TotalWorkRegNum = 0, TotalWorkIPReg = 0, TotalProRegNum = 0, TotalProIPReg = 0;
 				file_io.filewrite2(FinalResultFile, "业务个数：" + wprlist.size());
-				if (wprlist.size() != DemandNum) {
-					file_io.filewrite2(FinalResultFile, "此次shuffle无法完成所有业务");
-					continue;
-				}
+				ArrayList<Regenerator> reglist=new ArrayList<>();
+//				if (wprlist.size() != DemandNum) {
+//					file_io.filewrite2(FinalResultFile, "此次shuffle无法完成所有业务");
+//					continue;
+//				}
 				for (WorkandProtectRoute wpr : wprlist) {
 					file_io.filewrite2(FinalResultFile, "");
 					file_io.filewrite2(FinalResultFile, "nodepair：" + wpr.getdemand().getName());
@@ -172,27 +173,84 @@ public class MainOfAulixiaryRegenetor {
 									file_io.filewrite2(FinalResultFile, "距离为 " + length);
 									if (length > 2000 && length <= 4000) {
 										cost = Constant.Cost_OEO_reg_BPSK;
-										file_io.filewrite2(FinalResultFile, "采用BPSK,cost为：" + cost);
 									} else if (length > 1000 && length <= 2000) {
 										cost = Constant.Cost_OEO_reg_QPSK;
-										file_io.filewrite2(FinalResultFile, "采用QPSK,cost为：" + cost);
 									} else if (length > 500 && length <= 1000) {
 										cost = Constant.Cost_OEO_reg_8QAM;
-										file_io.filewrite2(FinalResultFile, "采用8QAM,cost为：" + cost);
 									} else if (length > 0 && length <= 500) {
 										cost = Constant.Cost_OEO_reg_16QAM;
-										file_io.filewrite2(FinalResultFile, "采用16QAM,cost为：" + cost);
 									}
 									WorkCost = WorkCost + cost;
 								}
 							}
 						}
 						file_io.filewrite2(FinalResultFile, "工作再生器总的cost为：" + WorkCost);
-						file_io.filewrite2(FinalResultFile, " ");
 						TotalWorkCost = TotalWorkCost + WorkCost;
 					} else {
 						file_io.filewrite2(FinalResultFile, "该工作链路不需要放置再生器");
 					}
+				
+					file_io.filewrite2(FinalResultFile, "");
+					file_io.filewrite2(FinalResultFile,"保护路径：");
+					if(wpr.getprovlinklist()!=null){
+						file_io.filewrite2(FinalResultFile,"保护路径在虚拟链路上路由为");
+						for(Link link:wpr.getprovlinklist()){
+							file_io.filewrite_without(FinalResultFile,link.getName()+"   ");
+						}
+					}
+					file_io.filewrite2(FinalResultFile,"");
+					if(wpr.getprolinklist()!=null){
+						file_io.filewrite2(FinalResultFile,"保护路径在物理链路上路由为");
+						for(Link link:wpr.getprolinklist()){
+							file_io.filewrite_without(FinalResultFile,link.getName()+"   ");
+						}
+					}
+					file_io.filewrite2(FinalResultFile,"");
+					file_io.filewrite_without(FinalResultFile,"保护路径放置共享再生器节点：");
+					for (Regenerator reg : wpr.getsharereglist()) {
+						reg.setPropathNum(reg.getPropathNum()+1);
+						if(!reglist.contains(reg)){
+							reglist.add(reg);
+						}
+						if(reg.getNature()==0)
+							file_io.filewrite_without(FinalResultFile,reg.getnode().getName() + "     "+"再生器在节点上的序号: "+reg.getindex()+" 是OEO再生器  ");
+						
+						if(reg.getNature()==1)
+							file_io.filewrite_without(FinalResultFile,reg.getnode().getName() + "     "+"再生器在节点上的序号: "+reg.getindex()+" 是IP再生器  ");
+					}
+					
+					
+					file_io.filewrite2(FinalResultFile, "");
+					file_io.filewrite_without(FinalResultFile,"保护路径放置新再生器节点：");
+					
+					for (Regenerator reg : wpr.getnewreglist()) {
+						reg.setPropathNum(reg.getPropathNum()+1);
+						if(!reglist.contains(reg)){
+							TotalProRegNum++;
+							reglist.add(reg);
+						}
+						if(reg.getNature()==0)
+							file_io.filewrite_without(FinalResultFile,reg.getnode().getName() + "     "+"再生器在节点上的序号: "+reg.getindex()+" 是OEO再生器  ");
+						
+						if(reg.getNature()==1){
+							file_io.filewrite_without(FinalResultFile,reg.getnode().getName() + "     "+"再生器在节点上的序号: "+reg.getindex()+" 是IP再生器  ");
+							TotalProIPReg++;
+						}
+						
+					}
+					file_io.filewrite2(FinalResultFile," ");
+					
+					//计算保护路径的cost
+					double ProEachcost=0;
+					if(wpr.getnewreglist().size()!=0){
+						ProEachcost=mm.ProCostCalculate(wpr);
+					}
+						file_io.filewrite2(FinalResultFile,"保护路径再生器的cost= " +ProEachcost);
+						TotalProCost=TotalProCost+ProEachcost;
+						file_io.filewrite2(FinalResultFile, "");
+				
+				
+				
 				}
 			}
 		}
@@ -234,8 +292,33 @@ public class MainOfAulixiaryRegenetor {
 			}
 		}
 
+		ArrayList<Link> totallink=new ArrayList<>();
 		WorkRouteStab wrs = new WorkRouteStab();
-		wrs.WorkRouteStab(nodepair, MixLayer, wprlist, ptoftransp, threshold);
+		totallink.clear();
+		wrs.WorkRouteStab(totallink,nodepair, MixLayer, wprlist, ptoftransp, threshold);
+		totallink.clear();
+		file_io.filewrite2(OutFileName, " ");
+		file_io.filewrite2(OutFileName, "开始路由保护");
+		HashMap<String, Link> Linklist2 = MixLayer.getLinklist();
+		Iterator<String> iter2 = Linklist2.keySet().iterator();
+		file_io.filewrite2(OutFileName, "链路条数" + Linklist2.size());
+		while (iter2.hasNext()) {
+			Link link = (Link) (Linklist2.get(iter2.next()));
+			file_io.filewrite2(OutFileName,
+					"链路" + link.getName() + "  属性 " + link.getnature_IPorOP() + "  " + link.getnature_WorkOrPro()
+							+ "  剩余" + link.getRestcapacity() + "   长度" + link.getLength() + "  cost:"
+							+ link.getCost());
+			if(link.getnature_IPorOP()==Constant.NATURE_IP){
+				file_io.filewrite2(OutFileName,"该IP链路对应的物理链路：");
+				for(Link psylink:link.getPhysicallink()){
+					file_io.filewrite(OutFileName,psylink.getName()+"   ");
+				}
+				file_io.filewrite2(OutFileName,"");
+			}
+		}
+		
+		ProRouteStab prs=new ProRouteStab();
+		prs.proroutestab(MixLayer, wprlist, nodepair, threshold, ptoftransp);
 
 	}
 
@@ -279,8 +362,7 @@ public class MainOfAulixiaryRegenetor {
 		return demandList;
 	}
 
-	public ArrayList<Integer> spectrumallocationOneRoute(Boolean routeflag, LinearRoute route, ArrayList<Link> linklist,
-			int slotnum) {
+	public ArrayList<Integer> spectrumallocationOneRoute(Boolean routeflag, LinearRoute route, ArrayList<Link> linklist,int slotnum) {
 		// true 是route false是linklist
 		ArrayList<Link> linklistOnroute = new ArrayList<Link>();
 		if (routeflag) {
@@ -337,8 +419,51 @@ public class MainOfAulixiaryRegenetor {
 		return sameindex;
 	}
 
-	public void FinalResultOut(ArrayList<WorkandProtectRoute> wprlist, int DemandNum) {
-		file_out_put file_io = new file_out_put();
-
+ 
+	public double ProCostCalculate(WorkandProtectRoute wpr) {
+		double TotalProCost=0;
+		file_out_put file_io=new file_out_put();
+		
+		for(int count=0;count<wpr.getRegProLengthList().size()-1;count++){
+			Regenerator reg= wpr.getRegeneratorlist().get(count);
+			if(wpr.getnewreglist().contains(reg)){//该再生器为新建的再生器
+				if(reg.getNature()==0){//OEO再生器
+					double cost=0;
+					file_io.filewrite2(FinalResultFile,"保护路径上第"+count+"个OEO再生器两端的cost");
+					for(int num=count;num<=count+1;num++){
+					double length=	wpr.getRegProLengthList().get(num);
+					if (length > 2000 && length <= 4000) {
+						cost=Constant.Cost_OEO_reg_BPSK;
+					} else if (length > 1000 && length <= 2000) {
+						cost=Constant.Cost_OEO_reg_QPSK;
+					} else if (length > 500 && length <= 1000) {
+						cost=Constant.Cost_OEO_reg_8QAM;
+					} else if (length > 0 && length <= 500) {
+						cost=Constant.Cost_OEO_reg_16QAM;
+					}
+						TotalProCost = TotalProCost + cost;
+					}
+				}
+				if(reg.getNature()==1){//IP再生器
+					double cost=0;
+					file_io.filewrite2(FinalResultFile,"保护路径上第"+count+"个IP再生器两端的cost");
+					for(int num=count;num<=count+1;num++){
+					double length=	wpr.getRegProLengthList().get(num);
+					file_io.filewrite2(FinalResultFile,"距离为 "+length);
+					if (length > 2000 && length <= 4000) {
+						cost=Constant.Cost_IP_reg_BPSK;
+					} else if (length > 1000 && length <= 2000) {
+						cost=Constant.Cost_IP_reg_QPSK;
+					} else if (length > 500 && length <= 1000) {
+						cost=Constant.Cost_IP_reg_8QAM;
+					} else if (length > 0 && length <= 500) {
+						cost=Constant.Cost_IP_reg_16QAM;
+					}
+						TotalProCost = TotalProCost + cost;
+					}
+				}
+				}
+			}
+		return TotalProCost;
 	}
 }
